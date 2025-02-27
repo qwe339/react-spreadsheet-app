@@ -1,0 +1,39 @@
+.toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  background-color: #f9f9f9;
+  padding: 8px;
+  border-radius: 4px;
+}
+
+.button-group {
+  display: flex;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+button {
+  padding: 6px 12px;
+  background-color: white;
+  border: none;
+  border-right: 1px solid #e0e0e0;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+button:last-child {
+  border-right: none;
+}
+
+button:hover {
+  background-color: #f0f0f0;
+}
+
+button.active {
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
