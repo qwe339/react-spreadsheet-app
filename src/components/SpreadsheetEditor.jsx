@@ -234,6 +234,11 @@ const SpreadsheetEditor = () => {
     }));
     
     updateStatusMessage('操作を元に戻しました', 3000);
+    
+    // スタイルを適用
+    setTimeout(() => {
+      applyStoredStyles();
+    }, 0);
   };
 
   // やり直し機能
@@ -274,6 +279,11 @@ const SpreadsheetEditor = () => {
     }));
     
     updateStatusMessage('操作をやり直しました', 3000);
+    
+    // スタイルを適用
+    setTimeout(() => {
+      applyStoredStyles();
+    }, 0);
   };
 
   // 保存されたスタイルを適用
@@ -284,21 +294,24 @@ const SpreadsheetEditor = () => {
     const rows = hot.countRows();
     const cols = hot.countCols();
     
-    // すべてのセルのスタイルをリセット
-    for (let row = 0; row < rows; row++) {
-      for (let col = 0; col < cols; col++) {
-        const cellMeta = hot.getCellMeta(row, col);
-        cellMeta.className = '';
-      }
-    }
+    // セルのcellメタデータ配列を初期化
+    const cellConfig = [];
     
-    // 保存されたスタイルを適用
+    // スタイル設定を追加
     Object.entries(cellStyles[currentSheet]).forEach(([key, className]) => {
       const [row, col] = key.split(',').map(Number);
       if (row < rows && col < cols) {
-        const cellMeta = hot.getCellMeta(row, col);
-        cellMeta.className = className;
+        cellConfig.push({
+          row: row,
+          col: col,
+          className: className.trim()
+        });
       }
+    });
+    
+    // スタイルを一括適用
+    hot.updateSettings({
+      cell: cellConfig
     });
     
     hot.render();
@@ -324,11 +337,6 @@ const SpreadsheetEditor = () => {
       // アクティブシートを更新
       setCurrentSheet(sheetId);
       
-      // スタイルを適用
-      setTimeout(() => {
-        applyStoredStyles();
-      }, 0);
-      
       // 数式エンジンのシート名を更新
       const formulasPlugin = hot.getPlugin('formulas');
       
@@ -349,6 +357,11 @@ const SpreadsheetEditor = () => {
       
       // ステータスバーを更新
       updateStatusMessage(`${sheetId} アクティブ`, 0);
+      
+      // スタイルを適用
+      setTimeout(() => {
+        applyStoredStyles();
+      }, 0);
     } catch (error) {
       console.error('シート切り替えエラー:', error);
       updateStatusMessage(`エラー: ${error.message}`, 5000);
@@ -423,128 +436,89 @@ const SpreadsheetEditor = () => {
     const hot = hotRef.current.hotInstance;
     const selection = hot.getSelected();
     if (!selection) return;
-
-  // デバッグログを追加
-  console.log('選択範囲:', selection);
-  console.log('適用するスタイル:', style);
-  
-  // 変更前の状態をアンドゥスタックに保存
-  pushToUndoStack();
-  
-  selection.forEach(coords => {
-    const [row1, col1, row2, col2] = coords;
     
-    for (let row = Math.min(row1, row2); row <= Math.max(row1, row2); row++) {
-      for (let col = Math.min(col1, col2); col <= Math.max(col1, col2); col++) {
-        // セルのメタデータを取得
-        const cellMeta = hot.getCellMeta(row, col);
-        console.log(`セル (${row},${col}) の現在のメタデータ:`, cellMeta);
-        
-        // スタイル設定
-        if (!cellMeta.className) cellMeta.className = '';
-        
-        // スタイルに応じてクラス名を付加
-        if (style.fontWeight === 'bold') {
-          if (!cellMeta.className.includes('font-bold')) {
-            cellMeta.className += ' font-bold';
-          }
-        } else if (style.fontWeight === 'normal') {
-          cellMeta.className = cellMeta.className.replace(/font-bold/g, '');
-        }
-        
-        if (style.fontStyle === 'italic') {
-          if (!cellMeta.className.includes('font-italic')) {
-            cellMeta.className += ' font-italic';
-          }
-        } else if (style.fontStyle === 'normal') {
-          cellMeta.className = cellMeta.className.replace(/font-italic/g, '');
-        }
-        
-        if (style.textDecoration === 'underline') {
-          if (!cellMeta.className.includes('text-underline')) {
-            cellMeta.className += ' text-underline';
-          }
-        } else if (style.textDecoration === 'none') {
-          cellMeta.className = cellMeta.className.replace(/text-underline/g, '');
-        }
-        
-        // テキスト配置の設定
-        if (style.textAlign) {
-          cellMeta.className = cellMeta.className
-            .replace(/text-left|text-center|text-right/g, '')
-            .trim();
-          cellMeta.className += ` text-${style.textAlign}`;
-        }
-        
-        // クラス名の重複を防ぐためのクリーンアップ
-        cellMeta.className = cellMeta.className
-          .split(' ')
-          .filter(Boolean)
-          .filter((value, index, self) => self.indexOf(value) === index)
-          .join(' ');
-        
-        console.log(`セル (${row},${col}) の更新後のクラス名:`, cellMeta.className);
-        
-        // スタイル情報を保存
-        setCellStyles(prevCellStyles => {
-          const updatedSheetStyles = {
-            ...(prevCellStyles[currentSheet] || {}),
-            [`${row},${col}`]: cellMeta.className
-          };
-          
-          return {
-            ...prevCellStyles,
-            [currentSheet]: updatedSheetStyles
-          };
-        });
-      }
-    }
-  });
-  
-  // 変更を反映するためにレンダリングを強制
-  hot.render();
-  console.log('レンダリング完了');
-};
-
-  // フォントをセルに適用する関数
-  const applyFontToSelection = (fontName) => {
-    const hot = hotRef.current.hotInstance;
-    const selection = hot.getSelected();
-    if (!selection) return;
-
     // 変更前の状態をアンドゥスタックに保存
     pushToUndoStack();
+    
+    // 現在のセル設定を取得
+    const currentCellConfig = hot.getSettings().cell || [];
+    const cellConfig = [...currentCellConfig];
     
     selection.forEach(coords => {
       const [row1, col1, row2, col2] = coords;
       
       for (let row = Math.min(row1, row2); row <= Math.max(row1, row2); row++) {
         for (let col = Math.min(col1, col2); col <= Math.max(col1, col2); col++) {
-          // セルのメタデータを取得
-          const cellMeta = hot.getCellMeta(row, col);
-          if (!cellMeta.className) cellMeta.className = '';
+          // 現在のセルスタイルを取得
+          const cellKey = `${row},${col}`;
+          const currentStyle = cellStyles[currentSheet][cellKey] || '';
+          let newClassName = currentStyle;
           
-          // 既存のフォントクラスを削除
-          cellMeta.className = cellMeta.className
-            .replace(/font-default|font-arial|font-times|font-courier|font-gothic|font-mincho|font-meiryo/g, '')
-            .trim();
+          // スタイルに応じてクラス名を更新
+          if (style.fontWeight === 'bold') {
+            if (!newClassName.includes('font-bold')) {
+              newClassName += ' font-bold';
+            }
+          } else if (style.fontWeight === 'normal') {
+            newClassName = newClassName.replace(/font-bold/g, '');
+          }
           
-          // 新しいフォントクラスを追加
-          cellMeta.className += ` font-${fontName}`;
+          if (style.fontStyle === 'italic') {
+            if (!newClassName.includes('font-italic')) {
+              newClassName += ' font-italic';
+            }
+          } else if (style.fontStyle === 'normal') {
+            newClassName = newClassName.replace(/font-italic/g, '');
+          }
+          
+          if (style.textDecoration === 'underline') {
+            if (!newClassName.includes('text-underline')) {
+              newClassName += ' text-underline';
+            }
+          } else if (style.textDecoration === 'none') {
+            newClassName = newClassName.replace(/text-underline/g, '');
+          }
+          
+          // テキスト配置の設定
+          if (style.textAlign) {
+            newClassName = newClassName
+              .replace(/text-left|text-center|text-right/g, '')
+              .trim();
+            newClassName += ` text-${style.textAlign}`;
+          }
           
           // クラス名の重複を防ぐためのクリーンアップ
-          cellMeta.className = cellMeta.className
+          newClassName = newClassName
             .split(' ')
             .filter(Boolean)
             .filter((value, index, self) => self.indexOf(value) === index)
-            .join(' ');
+            .join(' ')
+            .trim();
+          
+          // cellConfigにセルのスタイル設定を追加
+          const existingIndex = cellConfig.findIndex(cell => cell.row === row && cell.col === col);
+          
+          if (existingIndex >= 0) {
+            cellConfig[existingIndex].className = newClassName;
+          } else {
+            cellConfig.push({
+              row: row,
+              col: col,
+              className: newClassName
+            });
+          }
           
           // スタイル情報を保存
           setCellStyles(prevCellStyles => {
             const updatedSheetStyles = {
-              ...(prevCellStyles[currentSheet] || {}),
-              [`${row},${col}`]: cellMeta.className
+              ...(prevCellStyles[currentSheet] || {})
             };
+            
+            if (newClassName) {
+              updatedSheetStyles[cellKey] = newClassName;
+            } else {
+              delete updatedSheetStyles[cellKey];
+            }
             
             return {
               ...prevCellStyles,
@@ -555,9 +529,13 @@ const SpreadsheetEditor = () => {
       }
     });
     
-    // 変更を反映するためにレンダリングを強制
+    // 一括でスタイルを適用
+    hot.updateSettings({
+      cell: cellConfig
+    });
+    
     hot.render();
-    updateStatusMessage(`フォント「${fontName}」を適用しました`, 3000);
+    updateStatusMessage('書式を適用しました', 3000);
   };
 
   // セルを結合
@@ -606,6 +584,28 @@ const SpreadsheetEditor = () => {
     }
   };
 
+  // セルのクラスを設定するためのカスタム関数
+  const cellClassRenderer = (instance, td, row, col, prop, value, cellProperties) => {
+    // デフォルトのレンダラーを適用
+    Handsontable.renderers.TextRenderer.apply(this, arguments);
+    
+    // セルのキー
+    const cellKey = `${row},${col}`;
+    
+    // このセルにスタイルがあるか確認
+    if (cellStyles[currentSheet] && cellStyles[currentSheet][cellKey]) {
+      const classes = cellStyles[currentSheet][cellKey].split(' ');
+      
+      classes.forEach(className => {
+        if (className) {
+          td.classList.add(className);
+        }
+      });
+    }
+    
+    return td;
+  };
+
   // スプレッドシートの設定
   const hotSettings = {
     data: sheetData[currentSheet] || generateInitialData(100, 30),
@@ -624,13 +624,15 @@ const SpreadsheetEditor = () => {
     autoWrapRow: true,
     wordWrap: true,
     mergeCells: [],
-    cell: [],
     fixedRowsTop: 0,
     fixedColumnsLeft: 0,
     minSpareRows: 5,
     minSpareCols: 2,
     afterSelectionEnd: handleAfterSelectionEnd,
-    afterChange: handleAfterChange
+    afterChange: handleAfterChange,
+    className: 'htCustomStyles',
+    // カスタムクラス名を適用
+    cell: []
   };
 
   // ローカルストレージから前回のデータを読み込む
@@ -671,9 +673,21 @@ const SpreadsheetEditor = () => {
       });
       
       // スタイルを適用
-      applyStoredStyles();
+      setTimeout(() => {
+        applyStoredStyles();
+      }, 0);
     }
   }, [currentSheet]);
+
+  // Handsontable読み込み後の処理
+  useEffect(() => {
+    if (hotRef.current?.hotInstance) {
+      // スタイルを適用
+      setTimeout(() => {
+        applyStoredStyles();
+      }, 0);
+    }
+  }, [hotRef.current]);
 
   // キーボードショートカットの設定
   useEffect(() => {
@@ -725,6 +739,24 @@ const SpreadsheetEditor = () => {
       if (e.ctrlKey && e.key === 'p') {
         e.preventDefault();
         window.print();
+      }
+      
+      // Ctrl+B で太字
+      if (e.ctrlKey && e.key === 'b') {
+        e.preventDefault();
+        applyStyleToSelection({ fontWeight: 'bold' });
+      }
+      
+      // Ctrl+I で斜体
+      if (e.ctrlKey && e.key === 'i') {
+        e.preventDefault();
+        applyStyleToSelection({ fontStyle: 'italic' });
+      }
+      
+      // Ctrl+U で下線
+      if (e.ctrlKey && e.key === 'u') {
+        e.preventDefault();
+        applyStyleToSelection({ textDecoration: 'underline' });
       }
     };
     
@@ -1079,7 +1111,9 @@ const SpreadsheetEditor = () => {
         if (Object.keys(data.sheets).includes(currentSheet)) {
           const hot = hotRef.current.hotInstance;
           hot.loadData(data.sheets[currentSheet]);
-          applyStoredStyles();
+          setTimeout(() => {
+            applyStoredStyles();
+          }, 0);
         } else if (Object.keys(data.sheets).length > 0) {
           // 現在のシートが存在しない場合は最初のシートを選択
           setCurrentSheet(Object.keys(data.sheets)[0]);
@@ -1211,7 +1245,7 @@ const SpreadsheetEditor = () => {
           newValue = cellText.replace(searchText, replaceText);
         } else {
           newValue = cellText.replace(
-            new RegExp(searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'),
+            new RegExp(searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\      // ファイル名を生成（現在の日時を含'), 'gi'),
             replaceText
           );
         }
@@ -1267,7 +1301,7 @@ const SpreadsheetEditor = () => {
           } else {
             // 部分一致の場合は該当部分のみ置換
             const regex = new RegExp(
-              searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+              searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\      // ファイル名を生成（現在の日時を含'),
               caseSensitive ? 'g' : 'gi'
             );
             
@@ -1340,7 +1374,6 @@ const SpreadsheetEditor = () => {
         onSearch={() => setShowSearchModal(true)}
         onImportExcel={() => importFile('.xlsx, .xls')}
         onExportExcel={exportExcel}
-        onApplyFont={applyFontToSelection}
       />
       
       <FormulaBar 
@@ -1413,5 +1446,3 @@ const SpreadsheetEditor = () => {
 };
 
 export default SpreadsheetEditor;
-
-

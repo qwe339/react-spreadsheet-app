@@ -38,20 +38,45 @@ h1 {
   border-radius: 4px;
 }
 
-/* スタイル定義 */
-.font-bold { font-weight: bold !important; }
-.font-italic { font-style: italic !important; }
-.text-underline { text-decoration: underline !important; }
-.text-left { text-align: left !important; }
-.text-center { text-align: center !important; }
-.text-right { text-align: right !important; }
-.font-default { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important; }
-.font-arial { font-family: Arial, sans-serif !important; }
-.font-times { font-family: 'Times New Roman', Times, serif !important; }
-.font-courier { font-family: 'Courier New', Courier, monospace !important; }
-.font-gothic { font-family: 'MS Gothic', 'MS PGothic', sans-serif !important; }
-.font-mincho { font-family: 'MS Mincho', 'MS PMincho', serif !important; }
-.font-meiryo { font-family: 'Meiryo', 'Meiryo UI', sans-serif !important; }
+/* スタイル定義 - !important付きで強制的に適用 */
+.font-bold { 
+  font-weight: bold !important; 
+}
+.font-italic { 
+  font-style: italic !important; 
+}
+.text-underline { 
+  text-decoration: underline !important; 
+}
+.text-left { 
+  text-align: left !important; 
+}
+.text-center { 
+  text-align: center !important; 
+}
+.text-right { 
+  text-align: right !important; 
+}
+
+/* Handsontableのセルスタイル設定が確実に適用されるようにする */
+.htCustomStyles td.font-bold {
+  font-weight: bold !important;
+}
+.htCustomStyles td.font-italic {
+  font-style: italic !important;
+}
+.htCustomStyles td.text-underline {
+  text-decoration: underline !important;
+}
+.htCustomStyles td.text-left {
+  text-align: left !important;
+}
+.htCustomStyles td.text-center {
+  text-align: center !important;
+}
+.htCustomStyles td.text-right {
+  text-align: right !important;
+}
 
 /* モバイル対応 */
 @media (max-width: 768px) {
