@@ -17,7 +17,8 @@ const Toolbar = ({
   onUnmergeCells,
   onSearch,
   onImportExcel,
-  onExportExcel
+  onExportExcel,
+  onApplyFont // 新しく追加するフォント適用ハンドラー
 }) => {
   const [activeButtons, setActiveButtons] = useState({
     bold: false,
@@ -27,6 +28,9 @@ const Toolbar = ({
     alignCenter: false,
     alignRight: false
   });
+
+  // 選択されているフォントの状態を管理
+  const [selectedFont, setSelectedFont] = useState('default');
 
   const toggleButtonState = (button) => {
     setActiveButtons(prev => ({
@@ -77,6 +81,13 @@ const Toolbar = ({
     onAlignRight();
   };
 
+  // フォント変更ハンドラー
+  const handleFontChange = (e) => {
+    const fontName = e.target.value;
+    setSelectedFont(fontName);
+    onApplyFont(fontName); // 選択されたフォントを適用
+  };
+
   return (
     <div className="toolbar">
       <div className="button-group">
@@ -118,6 +129,23 @@ const Toolbar = ({
         >
           <i className="icon">↪️</i>
         </button>
+      </div>
+      
+      {/* フォント選択ドロップダウンを追加 */}
+      <div className="font-selector button-group">
+        <select 
+          value={selectedFont}
+          onChange={handleFontChange}
+          title="フォント"
+        >
+          <option value="default">デフォルト</option>
+          <option value="arial">Arial</option>
+          <option value="times">Times New Roman</option>
+          <option value="courier">Courier New</option>
+          <option value="gothic">MS ゴシック</option>
+          <option value="mincho">MS 明朝</option>
+          <option value="meiryo">メイリオ</option>
+        </select>
       </div>
       
       <div className="button-group">
@@ -220,4 +248,5 @@ const Toolbar = ({
     </div>
   );
 };
+
 export default Toolbar;

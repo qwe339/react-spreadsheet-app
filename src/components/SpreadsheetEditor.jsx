@@ -506,6 +506,60 @@ const SpreadsheetEditor = () => {
   console.log('レンダリング完了');
 };
 
+  // フォントをセルに適用する関数
+  const applyFontToSelection = (fontName) => {
+    const hot = hotRef.current.hotInstance;
+    const selection = hot.getSelected();
+    if (!selection) return;
+
+    // 変更前の状態をアンドゥスタックに保存
+    pushToUndoStack();
+    
+    selection.forEach(coords => {
+      const [row1, col1, row2, col2] = coords;
+      
+      for (let row = Math.min(row1, row2); row <= Math.max(row1, row2); row++) {
+        for (let col = Math.min(col1, col2); col <= Math.max(col1, col2); col++) {
+          // セルのメタデータを取得
+          const cellMeta = hot.getCellMeta(row, col);
+          if (!cellMeta.className) cellMeta.className = '';
+          
+          // 既存のフォントクラスを削除
+          cellMeta.className = cellMeta.className
+            .replace(/font-default|font-arial|font-times|font-courier|font-gothic|font-mincho|font-meiryo/g, '')
+            .trim();
+          
+          // 新しいフォントクラスを追加
+          cellMeta.className += ` font-${fontName}`;
+          
+          // クラス名の重複を防ぐためのクリーンアップ
+          cellMeta.className = cellMeta.className
+            .split(' ')
+            .filter(Boolean)
+            .filter((value, index, self) => self.indexOf(value) === index)
+            .join(' ');
+          
+          // スタイル情報を保存
+          setCellStyles(prevCellStyles => {
+            const updatedSheetStyles = {
+              ...(prevCellStyles[currentSheet] || {}),
+              [`${row},${col}`]: cellMeta.className
+            };
+            
+            return {
+              ...prevCellStyles,
+              [currentSheet]: updatedSheetStyles
+            };
+          });
+        }
+      }
+    });
+    
+    // 変更を反映するためにレンダリングを強制
+    hot.render();
+    updateStatusMessage(`フォント「${fontName}」を適用しました`, 3000);
+  };
+
   // セルを結合
   const mergeCells = () => {
     const hot = hotRef.current.hotInstance;
@@ -1286,6 +1340,7 @@ const SpreadsheetEditor = () => {
         onSearch={() => setShowSearchModal(true)}
         onImportExcel={() => importFile('.xlsx, .xls')}
         onExportExcel={exportExcel}
+        onApplyFont={applyFontToSelection}
       />
       
       <FormulaBar 
@@ -1358,3 +1413,5 @@ const SpreadsheetEditor = () => {
 };
 
 export default SpreadsheetEditor;
+
+

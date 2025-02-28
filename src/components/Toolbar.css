@@ -37,3 +37,95 @@ button.active {
   background-color: #e3f2fd;
   color: #1976d2;
 }
+
+/* フォント選択ドロップダウンのスタイル */
+.font-selector select {
+  padding: 6px 10px;
+  background-color: white;
+  border: none;
+  font-size: 14px;
+  height: 100%;
+  min-width: 140px;
+  cursor: pointer;
+  outline: none;
+}
+
+/* フォント選択ドロップダウンのホバー効果 */
+.font-selector select:hover {
+  background-color: #f0f0f0;
+}
+
+/* フォント選択ドロップダウンのフォーカス効果 */
+.font-selector select:focus {
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
+}
+
+/* フォントオプションのスタイル */
+.font-selector option {
+  padding: 8px;
+}.toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  background-color: #f9f9f9;
+  padding: 8px;
+  border-radius: 4px;
+}
+
+.button-group {
+  display: flex;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+button {
+  padding: 6px 12px;
+  background-color: white;
+  border: none;
+  border-right: 1px solid #e0e0e0;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+button:last-child {
+  border-right: none;
+}
+
+button:hover {
+  background-color: #f0f0f0;
+}
+
+button.active {
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
+
+/* フォント選択ドロップダウンのスタイル */
+.font-selector select {
+  padding: 6px 10px;
+  background-color: white;
+  border: none;
+  font-size: 14px;
+  height: 100%;
+  min-width: 140px;
+  cursor: pointer;
+  outline: none;
+}
+
+/* フォント選択ドロップダウンのホバー効果 */
+.font-selector select:hover {
+  background-color: #f0f0f0;
+}
+
+/* フォント選択ドロップダウンのフォーカス効果 */
+.font-selector select:focus {
+  box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2);
+}
+
+/* フォントオプションのスタイル */
+.font-selector option {
+  padding: 8px;
+}

@@ -45,6 +45,13 @@ h1 {
 .text-left { text-align: left !important; }
 .text-center { text-align: center !important; }
 .text-right { text-align: right !important; }
+.font-default { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important; }
+.font-arial { font-family: Arial, sans-serif !important; }
+.font-times { font-family: 'Times New Roman', Times, serif !important; }
+.font-courier { font-family: 'Courier New', Courier, monospace !important; }
+.font-gothic { font-family: 'MS Gothic', 'MS PGothic', sans-serif !important; }
+.font-mincho { font-family: 'MS Mincho', 'MS PMincho', serif !important; }
+.font-meiryo { font-family: 'Meiryo', 'Meiryo UI', sans-serif !important; }
 
 /* モバイル対応 */
 @media (max-width: 768px) {
