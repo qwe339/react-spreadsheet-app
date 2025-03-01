@@ -44,41 +44,64 @@ const Toolbar = ({
     }));
   };
 
-  const handleBoldClick = () => {
-    toggleButtonState('bold');
-    onApplyBold();
-  };
+const handleBoldClick = (e) => {
+  // イベントの伝播を停止
+  e.preventDefault();
+  e.stopPropagation();
+  
+  toggleButtonState('bold');
+  onApplyBold();
+};
 
-  const handleItalicClick = () => {
-    toggleButtonState('italic');
-    onApplyItalic();
-  };
+const handleItalicClick = (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  
+  toggleButtonState('italic');
+  onApplyItalic();
+};
 
-  const handleUnderlineClick = () => {
-    toggleButtonState('underline');
-    onApplyUnderline();
-  };
+const handleUnderlineClick = (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  
+  toggleButtonState('underline');
+  onApplyUnderline();
+};
 
-  const handleAlignLeftClick = () => {
-    resetAlignButtons();
-    setActiveButtons(prev => ({ ...prev, alignLeft: true }));
-    onAlignLeft();
-  };
+const handleAlignLeftClick = (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  
+  resetAlignButtons();
+  setActiveButtons(prev => ({ ...prev, alignLeft: true }));
+  onAlignLeft();
+};
 
-  const handleAlignCenterClick = () => {
-    resetAlignButtons();
-    setActiveButtons(prev => ({ ...prev, alignCenter: true }));
-    onAlignCenter();
-  };
+const handleAlignCenterClick = (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  
+  resetAlignButtons();
+  setActiveButtons(prev => ({ ...prev, alignCenter: true }));
+  onAlignCenter();
+};
 
-  const handleAlignRightClick = () => {
-    resetAlignButtons();
-    setActiveButtons(prev => ({ ...prev, alignRight: true }));
-    onAlignRight();
-  };
+const handleAlignRightClick = (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  
+  resetAlignButtons();
+  setActiveButtons(prev => ({ ...prev, alignRight: true }));
+  onAlignRight();
+};
 
-  return (
-    <div className="toolbar">
+const preventDeselection = (e) => {
+  e.stopPropagation();
+};
+
+return (
+  <div className="toolbar" onClick={preventDeselection}>
       <div className="button-group">
         <button 
           id="btn-new" 

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet';
 import { HotTable } from '@handsontable/react';
 import { registerAllModules } from 'handsontable/registry';
+import Handsontable from 'handsontable';
 import 'handsontable/dist/handsontable.full.min.css';
 import { HyperFormula } from 'hyperformula';
 import * as XLSX from 'xlsx';
@@ -433,110 +434,126 @@ const SpreadsheetEditor = () => {
 
   // 選択範囲にスタイルを適用
   const applyStyleToSelection = (style) => {
-    const hot = hotRef.current.hotInstance;
-    const selection = hot.getSelected();
-    if (!selection) return;
+  const hot = hotRef.current.hotInstance;
+  const selection = hot.getSelected();
+  if (!selection) return;
+  
+  // 現在の選択範囲を保存
+  const currentSelection = [...selection[0]]; // [startRow, startCol, endRow, endCol]
+  
+  // 変更前の状態をアンドゥスタックに保存
+  pushToUndoStack();
+  
+  // 現在のセル設定を取得
+  const currentCellConfig = hot.getSettings().cell || [];
+  const cellConfig = [...currentCellConfig];
+  
+  selection.forEach(coords => {
+    const [row1, col1, row2, col2] = coords;
     
-    // 変更前の状態をアンドゥスタックに保存
-    pushToUndoStack();
-    
-    // 現在のセル設定を取得
-    const currentCellConfig = hot.getSettings().cell || [];
-    const cellConfig = [...currentCellConfig];
-    
-    selection.forEach(coords => {
-      const [row1, col1, row2, col2] = coords;
-      
-      for (let row = Math.min(row1, row2); row <= Math.max(row1, row2); row++) {
-        for (let col = Math.min(col1, col2); col <= Math.max(col1, col2); col++) {
-          // 現在のセルスタイルを取得
-          const cellKey = `${row},${col}`;
-          const currentStyle = cellStyles[currentSheet][cellKey] || '';
-          let newClassName = currentStyle;
-          
-          // スタイルに応じてクラス名を更新
-          if (style.fontWeight === 'bold') {
-            if (!newClassName.includes('font-bold')) {
-              newClassName += ' font-bold';
-            }
-          } else if (style.fontWeight === 'normal') {
-            newClassName = newClassName.replace(/font-bold/g, '');
+    for (let row = Math.min(row1, row2); row <= Math.max(row1, row2); row++) {
+      for (let col = Math.min(col1, col2); col <= Math.max(col1, col2); col++) {
+        // 現在のセルスタイルを取得
+        const cellKey = `${row},${col}`;
+        const currentStyle = cellStyles[currentSheet][cellKey] || '';
+        let newClassName = currentStyle;
+        
+        // スタイルに応じてクラス名を更新
+        if (style.fontWeight === 'bold') {
+          if (!newClassName.includes('font-bold')) {
+            newClassName += ' font-bold';
           }
-          
-          if (style.fontStyle === 'italic') {
-            if (!newClassName.includes('font-italic')) {
-              newClassName += ' font-italic';
-            }
-          } else if (style.fontStyle === 'normal') {
-            newClassName = newClassName.replace(/font-italic/g, '');
+        } else if (style.fontWeight === 'normal') {
+          newClassName = newClassName.replace(/font-bold/g, '');
+        }
+        
+        if (style.fontStyle === 'italic') {
+          if (!newClassName.includes('font-italic')) {
+            newClassName += ' font-italic';
           }
-          
-          if (style.textDecoration === 'underline') {
-            if (!newClassName.includes('text-underline')) {
-              newClassName += ' text-underline';
-            }
-          } else if (style.textDecoration === 'none') {
-            newClassName = newClassName.replace(/text-underline/g, '');
+        } else if (style.fontStyle === 'normal') {
+          newClassName = newClassName.replace(/font-italic/g, '');
+        }
+        
+        if (style.textDecoration === 'underline') {
+          if (!newClassName.includes('text-underline')) {
+            newClassName += ' text-underline';
           }
-          
-          // テキスト配置の設定
-          if (style.textAlign) {
-            newClassName = newClassName
-              .replace(/text-left|text-center|text-right/g, '')
-              .trim();
-            newClassName += ` text-${style.textAlign}`;
-          }
-          
-          // クラス名の重複を防ぐためのクリーンアップ
+        } else if (style.textDecoration === 'none') {
+          newClassName = newClassName.replace(/text-underline/g, '');
+        }
+        
+        // テキスト配置の設定
+        if (style.textAlign) {
           newClassName = newClassName
-            .split(' ')
-            .filter(Boolean)
-            .filter((value, index, self) => self.indexOf(value) === index)
-            .join(' ')
+            .replace(/text-left|text-center|text-right/g, '')
             .trim();
-          
-          // cellConfigにセルのスタイル設定を追加
-          const existingIndex = cellConfig.findIndex(cell => cell.row === row && cell.col === col);
-          
-          if (existingIndex >= 0) {
-            cellConfig[existingIndex].className = newClassName;
-          } else {
-            cellConfig.push({
-              row: row,
-              col: col,
-              className: newClassName
-            });
-          }
-          
-          // スタイル情報を保存
-          setCellStyles(prevCellStyles => {
-            const updatedSheetStyles = {
-              ...(prevCellStyles[currentSheet] || {})
-            };
-            
-            if (newClassName) {
-              updatedSheetStyles[cellKey] = newClassName;
-            } else {
-              delete updatedSheetStyles[cellKey];
-            }
-            
-            return {
-              ...prevCellStyles,
-              [currentSheet]: updatedSheetStyles
-            };
+          newClassName += ` text-${style.textAlign}`;
+        }
+        
+        // クラス名の重複を防ぐためのクリーンアップ
+        newClassName = newClassName
+          .split(' ')
+          .filter(Boolean)
+          .filter((value, index, self) => self.indexOf(value) === index)
+          .join(' ')
+          .trim();
+        
+        // cellConfigにセルのスタイル設定を追加
+        const existingIndex = cellConfig.findIndex(cell => cell.row === row && cell.col === col);
+        
+        if (existingIndex >= 0) {
+          cellConfig[existingIndex].className = newClassName;
+        } else {
+          cellConfig.push({
+            row: row,
+            col: col,
+            className: newClassName
           });
         }
+        
+        // スタイル情報を保存
+        setCellStyles(prevCellStyles => {
+          const updatedSheetStyles = {
+            ...(prevCellStyles[currentSheet] || {})
+          };
+          
+          if (newClassName) {
+            updatedSheetStyles[cellKey] = newClassName;
+          } else {
+            delete updatedSheetStyles[cellKey];
+          }
+          
+          return {
+            ...prevCellStyles,
+            [currentSheet]: updatedSheetStyles
+          };
+        });
       }
-    });
-    
-    // 一括でスタイルを適用
-    hot.updateSettings({
-      cell: cellConfig
-    });
-    
-    hot.render();
-    updateStatusMessage('書式を適用しました', 3000);
-  };
+    }
+  });
+  
+  // 一括でスタイルを適用
+  hot.updateSettings({
+    cell: cellConfig
+  });
+  
+  // 明示的に再描画を強制
+  hot.render();
+  
+  // 選択範囲を復元
+  setTimeout(() => {
+    hot.selectCell(
+      currentSelection[0], 
+      currentSelection[1], 
+      currentSelection[2], 
+      currentSelection[3], 
+      false
+    );
+  }, 10);
+  
+  updateStatusMessage('書式を適用しました', 3000);
+};
 
   // セルを結合
   const mergeCells = () => {
@@ -585,55 +602,55 @@ const SpreadsheetEditor = () => {
   };
 
   // セルのクラスを設定するためのカスタム関数
-  const cellClassRenderer = (instance, td, row, col, prop, value, cellProperties) => {
-    // デフォルトのレンダラーを適用
-    Handsontable.renderers.TextRenderer.apply(this, arguments);
+const cellClassRenderer = (instance, td, row, col, prop, value, cellProperties) => {
+  // デフォルトのレンダラーを適用
+  Handsontable.renderers.TextRenderer.apply(this, [instance, td, row, col, prop, value, cellProperties]);
+  
+  // セルのキー
+  const cellKey = `${row},${col}`;
+  
+  // このセルにスタイルがあるか確認
+  if (cellStyles[currentSheet] && cellStyles[currentSheet][cellKey]) {
+    const classes = cellStyles[currentSheet][cellKey].split(' ');
     
-    // セルのキー
-    const cellKey = `${row},${col}`;
-    
-    // このセルにスタイルがあるか確認
-    if (cellStyles[currentSheet] && cellStyles[currentSheet][cellKey]) {
-      const classes = cellStyles[currentSheet][cellKey].split(' ');
-      
-      classes.forEach(className => {
-        if (className) {
-          td.classList.add(className);
-        }
-      });
-    }
-    
-    return td;
-  };
+    classes.forEach(className => {
+      if (className) {
+        td.classList.add(className);
+      }
+    });
+  }
+  
+  return td;
+};
 
   // スプレッドシートの設定
   const hotSettings = {
-    data: sheetData[currentSheet] || generateInitialData(100, 30),
-    rowHeaders: true,
-    colHeaders: true,
-    licenseKey: 'non-commercial-and-evaluation',
-    contextMenu: true,
-    manualColumnResize: true,
-    manualRowResize: true,
-    comments: true,
-    formulas: {
-      engine: hyperformulaInstance,
-      sheetName: currentSheet
-    },
-    stretchH: 'all',
-    autoWrapRow: true,
-    wordWrap: true,
-    mergeCells: [],
-    fixedRowsTop: 0,
-    fixedColumnsLeft: 0,
-    minSpareRows: 5,
-    minSpareCols: 2,
-    afterSelectionEnd: handleAfterSelectionEnd,
-    afterChange: handleAfterChange,
-    className: 'htCustomStyles',
-    // カスタムクラス名を適用
-    cell: []
-  };
+  data: sheetData[currentSheet] || generateInitialData(100, 30),
+  rowHeaders: true,
+  colHeaders: true,
+  licenseKey: 'non-commercial-and-evaluation',
+  contextMenu: true,
+  manualColumnResize: true,
+  manualRowResize: true,
+  comments: true,
+  formulas: {
+    engine: hyperformulaInstance,
+    sheetName: currentSheet
+  },
+  stretchH: 'all',
+  autoWrapRow: true,
+  wordWrap: true,
+  mergeCells: [],
+  fixedRowsTop: 0,
+  fixedColumnsLeft: 0,
+  minSpareRows: 5,
+  minSpareCols: 2,
+  afterSelectionEnd: handleAfterSelectionEnd,
+  afterChange: handleAfterChange,
+  className: 'htCustomStyles',
+  outsideClickDeselects: false, // 外部クリックで選択解除しない設定を追加
+  cell: []
+};
 
   // ローカルストレージから前回のデータを読み込む
   useEffect(() => {
