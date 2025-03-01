@@ -288,35 +288,40 @@ const SpreadsheetEditor = () => {
   };
 
   // 保存されたスタイルを適用
-  const applyStoredStyles = () => {
-    if (!cellStyles[currentSheet]) return;
+const applyStoredStyles = () => {
+  if (!cellStyles[currentSheet]) return;
+  
+  const hot = hotRef.current.hotInstance;
+  const rows = hot.countRows();
+  const cols = hot.countCols();
+  
+  // セルのcellメタデータ配列を初期化
+  const cellConfig = [];
+  
+  // スタイル設定を追加
+  Object.entries(cellStyles[currentSheet]).forEach(([key, className]) => {
+    // キーからインデックスを取得し、数値に変換
+    const [rowStr, colStr] = key.split(',');
+    const row = parseInt(rowStr, 10);
+    const col = parseInt(colStr, 10);
     
-    const hot = hotRef.current.hotInstance;
-    const rows = hot.countRows();
-    const cols = hot.countCols();
-    
-    // セルのcellメタデータ配列を初期化
-    const cellConfig = [];
-    
-    // スタイル設定を追加
-    Object.entries(cellStyles[currentSheet]).forEach(([key, className]) => {
-      const [row, col] = key.split(',').map(Number);
-      if (row < rows && col < cols) {
-        cellConfig.push({
-          row: row,
-          col: col,
-          className: className.trim()
-        });
-      }
-    });
-    
-    // スタイルを一括適用
-    hot.updateSettings({
-      cell: cellConfig
-    });
-    
-    hot.render();
-  };
+    // 有効な数値であり、かつ範囲内であることを確認
+    if (!isNaN(row) && !isNaN(col) && row >= 0 && col >= 0 && row < rows && col < cols) {
+      cellConfig.push({
+        row: row,
+        col: col,
+        className: className.trim()
+      });
+    }
+  });
+  
+  // スタイルを一括適用
+  hot.updateSettings({
+    cell: cellConfig
+  });
+  
+  hot.render();
+};
 
   // シート切り替え処理
   const switchSheet = (sheetId) => {
@@ -556,37 +561,51 @@ const SpreadsheetEditor = () => {
 };
 
   // セルを結合
-  const mergeCells = () => {
-    const hot = hotRef.current.hotInstance;
-    const selection = hot.getSelected();
-    if (selection) {
-      // 変更前の状態をアンドゥスタックに保存
-      pushToUndoStack();
-      
-      const [row1, col1, row2, col2] = selection[0];
-      hot.mergeCells({
-        row: Math.min(row1, row2),
-        col: Math.min(col1, col2),
-        rowspan: Math.abs(row2 - row1) + 1,
-        colspan: Math.abs(col2 - col1) + 1
-      });
-      hot.render();
+const mergeCells = () => {
+  const hot = hotRef.current.hotInstance;
+  const selection = hot.getSelected();
+  if (selection) {
+    // 変更前の状態をアンドゥスタックに保存
+    pushToUndoStack();
+    
+    const [row1, col1, row2, col2] = selection[0];
+    
+    // MergeCellsプラグインを使用してセルを結合
+    const mergeCellsPlugin = hot.getPlugin('mergeCells');
+    if (mergeCellsPlugin) {
+      mergeCellsPlugin.merge(
+        Math.min(row1, row2),
+        Math.min(col1, col2),
+        Math.abs(row2 - row1) + 1,
+        Math.abs(col2 - col1) + 1
+      );
+      hot.render(); // 変更を反映するための再描画
+    } else {
+      console.error('MergeCellsプラグインが利用できません');
     }
-  };
+  }
+};
 
   // セルの結合を解除
-  const unmergeCells = () => {
-    const hot = hotRef.current.hotInstance;
-    const selection = hot.getSelected();
-    if (selection) {
-      // 変更前の状態をアンドゥスタックに保存
-      pushToUndoStack();
-      
-      const [row, col] = selection[0];
-      hot.unmergeCells(row, col);
-      hot.render();
+const unmergeCells = () => {
+  const hot = hotRef.current.hotInstance;
+  const selection = hot.getSelected();
+  if (selection) {
+    // 変更前の状態をアンドゥスタックに保存
+    pushToUndoStack();
+    
+    const [row, col] = selection[0];
+    
+    // MergeCellsプラグインを使用して結合を解除
+    const mergeCellsPlugin = hot.getPlugin('mergeCells');
+    if (mergeCellsPlugin) {
+      mergeCellsPlugin.unmergeAtCell(row, col);
+      hot.render(); // 変更を反映するための再描画
+    } else {
+      console.error('MergeCellsプラグインが利用できません');
     }
-  };
+  }
+};
 
   // 数式バーからセルの更新
   const handleFormulaInputChange = (value) => {
@@ -624,7 +643,7 @@ const cellClassRenderer = (instance, td, row, col, prop, value, cellProperties) 
 };
 
   // スプレッドシートの設定
-  const hotSettings = {
+const hotSettings = {
   data: sheetData[currentSheet] || generateInitialData(100, 30),
   rowHeaders: true,
   colHeaders: true,
@@ -640,7 +659,8 @@ const cellClassRenderer = (instance, td, row, col, prop, value, cellProperties) 
   stretchH: 'all',
   autoWrapRow: true,
   wordWrap: true,
-  mergeCells: [],
+  // mergeCellsプラグインを確実に有効化
+  mergeCells: true,
   fixedRowsTop: 0,
   fixedColumnsLeft: 0,
   minSpareRows: 5,
@@ -648,7 +668,7 @@ const cellClassRenderer = (instance, td, row, col, prop, value, cellProperties) 
   afterSelectionEnd: handleAfterSelectionEnd,
   afterChange: handleAfterChange,
   className: 'htCustomStyles',
-  outsideClickDeselects: false, // 外部クリックで選択解除しない設定を追加
+  outsideClickDeselects: false,
   cell: []
 };
 
