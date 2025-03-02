@@ -1,3 +1,4 @@
+import iconv from 'iconv-lite';
 import React, { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet';
 import { HotTable } from '@handsontable/react';
@@ -65,7 +66,7 @@ const SpreadsheetEditor = () => {
   const [availableSheets, setAvailableSheets] = useState(initialSheets);
   const [selectedCell, setSelectedCell] = useState({ row: 0, col: 0 });
   const [selectionRange, setSelectionRange] = useState(null);
-  const [statusMessage, setStatusMessage] = useState('拡張Handsontableスプレッドシートへようこそ');
+  const [statusMessage, setStatusMessage] = useState('スプレッドシートへようこそ');
   const [cellAddress, setCellAddress] = useState('A1');
   const [formulaValue, setFormulaValue] = useState('');
   const [selectionStats, setSelectionStats] = useState({ sum: 0, average: 0, selection: 'なし' });
@@ -131,6 +132,18 @@ const SpreadsheetEditor = () => {
     updateSelectionStats(row, column, row2, column2);
   };
 
+    // 数式バーからセルの更新
+    const handleFormulaInputChange = (value) => {
+      setFormulaValue(value);
+  };
+
+    // 数式バーでEnterキーが押された時の処理
+    const handleFormulaSubmit = () => {
+      const hot = hotRef.current.hotInstance;
+      if (selectedCell) {
+        hot.setDataAtCell(selectedCell.row, selectedCell.col, formulaValue);
+      }
+    };
   // 選択範囲の統計を更新
   const updateSelectionStats = (row, col, row2, col2) => {
     const hot = hotRef.current.hotInstance;
@@ -588,7 +601,7 @@ const mergeCells = () => {
   }
 };
 
-  // セルの結合を解除
+// セルの結合を解除
 const unmergeCells = () => {
   const hot = hotRef.current.hotInstance;
   const selection = hot.getSelected();
@@ -601,26 +614,19 @@ const unmergeCells = () => {
     // MergeCellsプラグインを使用して結合を解除
     const mergeCellsPlugin = hot.getPlugin('mergeCells');
     if (mergeCellsPlugin) {
-      mergeCellsPlugin.unmergeAtCell(row, col);
+      // 最新のAPIでは unmerge メソッドを使用
+      // 選択範囲の座標を取得
+      const [startRow, startCol, endRow, endCol] = selection[0];
+      
+      // 選択範囲内のすべてのマージされたセルを解除
+      mergeCellsPlugin.unmerge(startRow, startCol, endRow, endCol);
+      
       hot.render(); // 変更を反映するための再描画
     } else {
       console.error('MergeCellsプラグインが利用できません');
     }
   }
 };
-
-  // 数式バーからセルの更新
-  const handleFormulaInputChange = (value) => {
-    setFormulaValue(value);
-  };
-
-  // 数式バーでEnterキーが押された時の処理
-  const handleFormulaSubmit = () => {
-    const hot = hotRef.current.hotInstance;
-    if (selectedCell) {
-      hot.setDataAtCell(selectedCell.row, selectedCell.col, formulaValue);
-    }
-  };
 
   // セルのクラスを設定するためのカスタム関数
 const cellClassRenderer = (instance, td, row, col, prop, value, cellProperties) => {
@@ -872,48 +878,48 @@ const hotSettings = {
     }
   };
 
-  // CSVエクスポート機能
-  const exportCSV = () => {
-    const hot = hotRef.current.hotInstance;
+// CSVエクスポート機能
+const exportCSV = () => {
+  const hot = hotRef.current.hotInstance;
+  
+  // 現在のシートのデータを取得
+  const currentData = hot.getData();
+  
+  try {
+    // CSVに変換
+    const csvContent = Papa.unparse(currentData, {
+      delimiter: ',',
+      header: false
+    });
     
-    // 現在のシートのデータを取得
-    const currentData = hot.getData();
+    // iconv-liteを使用してUTF-8からShift_JISに変換
+    const shiftJisBuffer = iconv.encode(csvContent, 'Shift_JIS');
     
-    try {
-      // CSVに変換
-      const csvContent = Papa.unparse(currentData, {
-        delimiter: ',',
-        header: false
-      });
-      
-      // BOMを追加してUTF-8として認識されるようにする
-      const csvContentWithBOM = '\uFEFF' + csvContent;
-      
-      // Blobを作成してダウンロード
-      const blob = new Blob([csvContentWithBOM], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      
-      // ダウンロードリンクを作成
-      const link = document.createElement('a');
-      const now = new Date();
-      const dateStr = now.getFullYear() + 
-                     ('0' + (now.getMonth() + 1)).slice(-2) + 
-                     ('0' + now.getDate()).slice(-2);
-      link.setAttribute('href', url);
-      link.setAttribute('download', `spreadsheet_export_${dateStr}.csv`);
-      link.style.visibility = 'hidden';
-      
-      // クリックを実行してダウンロード
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      updateStatusMessage('CSVファイルをエクスポートしました', 3000);
-    } catch (error) {
-      console.error('CSVエクスポートエラー:', error);
-      updateStatusMessage('CSVエクスポートに失敗しました', 5000);
-    }
-  };
+    // Blobを作成してダウンロード
+    const blob = new Blob([shiftJisBuffer], { type: 'text/csv;charset=shift_jis' });
+    const url = URL.createObjectURL(blob);
+    
+    // ダウンロードリンクを作成
+    const link = document.createElement('a');
+    const now = new Date();
+    const dateStr = now.getFullYear() + 
+                   ('0' + (now.getMonth() + 1)).slice(-2) + 
+                   ('0' + now.getDate()).slice(-2);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `spreadsheet_export_${dateStr}.csv`);
+    link.style.visibility = 'hidden';
+    
+    // クリックを実行してダウンロード
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    updateStatusMessage('Shift_JIS形式でCSVファイルをエクスポートしました', 3000);
+  } catch (error) {
+    console.error('CSVエクスポートエラー:', error);
+    updateStatusMessage('CSVエクスポートに失敗しました', 5000);
+  }
+};
 
   // Excelインポート用の関数 (importFile関数を修正)
 const importExcel = (acceptTypes = '.xlsx, .xls') => {
@@ -1377,11 +1383,11 @@ const handleCSVImport = (csvText, parseOptions) => {
   return (
     <div className="spreadsheet-container">
       <Helmet>
-        <title>拡張Handsontableスプレッドシート</title>
+        <title>スプレッドシート</title>
       </Helmet>
       
       <div className="header">
-        <h1>拡張Handsontableスプレッドシート</h1>
+        <h1>スプレッドシート</h1>
       </div>
       
       <MenuBar 
@@ -1424,15 +1430,15 @@ const handleCSVImport = (csvText, parseOptions) => {
         onMergeCells={mergeCells}
         onUnmergeCells={unmergeCells}
         onSearch={() => setShowSearchModal(true)}
-        onImportExcel={() => importFile('.xlsx, .xls')}
+        onImportExcel={() => importExcel('.xlsx, .xls')}
         onExportExcel={exportExcel}
       />
       
       <FormulaBar 
-        cellAddress={cellAddress}
-        value={formulaValue}
-        onChange={handleFormulaInputChange}
-        onSubmit={handleFormulaSubmit}
+  cellAddress={cellAddress}
+  value={formulaValue}
+  onChange={setFormulaValue}
+  onSubmit={handleFormulaSubmit}
       />
       
       <SheetTabs 

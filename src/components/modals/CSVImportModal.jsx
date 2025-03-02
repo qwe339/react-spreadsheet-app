@@ -6,7 +6,7 @@ import './CSVImportModal.css';
 const CSVImportModal = ({ onClose, onImport }) => {
   // CSV設定のステート
   const [csvSettings, setCsvSettings] = useState({
-    encoding: 'UTF-8',
+    encoding: 'Shift_JIS',
     delimiter: '',
     hasHeader: true,
     ignoreFieldMismatch: true,
@@ -120,10 +120,10 @@ const CSVImportModal = ({ onClose, onImport }) => {
             onChange={(e) => handleSettingChange('encoding', e.target.value)}
             className="csv-select"
           >
-            <option value="UTF-8">UTF-8</option>
             <option value="Shift_JIS">Shift-JIS</option>
-            <option value="ISO-8859-1">ISO-8859-1</option>
+            <option value="UTF-8">UTF-8</option>
             <option value="EUC-JP">EUC-JP</option>
+            <option value="ISO-8859-1">ISO-8859-1</option>
             <option value="CP932">CP932</option>
           </select>
         </div>
