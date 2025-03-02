@@ -132,18 +132,35 @@ const SpreadsheetEditor = () => {
     updateSelectionStats(row, column, row2, column2);
   };
 
-    // 数式バーからセルの更新
-    const handleFormulaInputChange = (value) => {
-      setFormulaValue(value);
-  };
+// 数式バーからセルの更新
+const handleFormulaInputChange = (value) => {
+  setFormulaValue(value);
+};
 
-    // 数式バーでEnterキーが押された時の処理
-    const handleFormulaSubmit = () => {
-      const hot = hotRef.current.hotInstance;
-      if (selectedCell) {
-        hot.setDataAtCell(selectedCell.row, selectedCell.col, formulaValue);
-      }
-    };
+// 数式バーでEnterキーが押された時の処理
+const handleFormulaSubmit = () => {
+  const hot = hotRef.current.hotInstance;
+  if (selectedCell) {
+    hot.setDataAtCell(selectedCell.row, selectedCell.col, formulaValue);
+  }
+};
+
+// 書式メニュー処理の追加
+const handleFormatCellClick = () => {
+  // 書式ダイアログを表示するロジックをここに実装
+  // 今回は簡易的に直接書式を適用
+  if (selectionRange) {
+    // 例: 太字、左揃えを適用
+    applyStyleToSelection({ 
+      fontWeight: 'bold',
+      textAlign: 'left'
+    });
+    updateStatusMessage('セルの書式を適用しました', 3000);
+  } else {
+    updateStatusMessage('書式を適用するセルを選択してください', 3000);
+  }
+};
+
   // 選択範囲の統計を更新
   const updateSelectionStats = (row, col, row2, col2) => {
     const hot = hotRef.current.hotInstance;
@@ -1391,25 +1408,32 @@ const handleCSVImport = (csvText, parseOptions) => {
       </div>
       
       <MenuBar 
-        onNewFile={() => {
-          if (window.confirm('新しいスプレッドシートを作成しますか？現在のデータは保存されていない場合、失われます。')) {
-            resetSpreadsheet();
-          }
-        }}
-        onOpenFile={() => setShowOpenFileModal(true)}
-        onSave={handleSave}
-        onSaveAs={() => setShowSaveAsModal(true)}
-        onImportCSV={importCSV}  // 変更: importFile から importCSV へ
-        onImportExcel={() => importExcel('.xlsx, .xls')}  // 変更: importFile から importExcel へ
-        onExportCSV={exportCSV}
-        onExportExcel={exportExcel}
-        onPrint={() => window.print()}
-        onUndo={undo}
-        onRedo={redo}
-        onSearch={() => setShowSearchModal(true)}
-        onAbout={() => setShowAboutModal(true)}
-        onShortcuts={() => setShowShortcutsModal(true)}
-      />
+  onNewFile={() => {
+    if (window.confirm('新しいスプレッドシートを作成しますか？現在のデータは保存されていない場合、失われます。')) {
+      resetSpreadsheet();
+    }
+  }}
+  onOpenFile={() => setShowOpenFileModal(true)}
+  onSave={handleSave}
+  onSaveAs={() => setShowSaveAsModal(true)}
+  onImportCSV={importCSV}
+  onImportExcel={() => importExcel('.xlsx, .xls')}
+  onExportCSV={exportCSV}
+  onExportExcel={exportExcel}
+  onPrint={() => window.print()}
+  onUndo={undo}
+  onRedo={redo}
+  onSearch={() => setShowSearchModal(true)}
+  onAbout={() => setShowAboutModal(true)}
+  onShortcuts={() => setShowShortcutsModal(true)}
+  onFormatCell={handleFormatCellClick}
+  onApplyBold={() => applyStyleToSelection({ fontWeight: 'bold' })}
+  onApplyItalic={() => applyStyleToSelection({ fontStyle: 'italic' })}
+  onApplyUnderline={() => applyStyleToSelection({ textDecoration: 'underline' })}
+  onAlignLeft={() => applyStyleToSelection({ textAlign: 'left' })}
+  onAlignCenter={() => applyStyleToSelection({ textAlign: 'center' })}
+  onAlignRight={() => applyStyleToSelection({ textAlign: 'right' })}
+/>
       
       <Toolbar 
         onNew={() => {

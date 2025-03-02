@@ -18,7 +18,14 @@ const MenuBar = ({
   onPaste,
   onSearch,
   onAbout,
-  onShortcuts
+  onShortcuts,
+  onFormatCell,
+  onApplyBold,
+  onApplyItalic, 
+  onApplyUnderline,
+  onAlignLeft,
+  onAlignCenter,
+  onAlignRight
 }) => {
   const [activeMenu, setActiveMenu] = useState(null);
 
@@ -103,25 +110,25 @@ const MenuBar = ({
         )}
       </div>
       
-      <div 
-        className={`menu-item ${activeMenu === 'format' ? 'active' : ''}`}
-        onClick={() => handleMenuClick('format')}
-      >
-        書式
-        {activeMenu === 'format' && (
-          <div className="dropdown-content">
-            <div className="dropdown-item">セルの書式...</div>
-            <div className="dropdown-separator"></div>
-            <div className="dropdown-item">太字</div>
-            <div className="dropdown-item">斜体</div>
-            <div className="dropdown-item">下線</div>
-            <div className="dropdown-separator"></div>
-            <div className="dropdown-item">左揃え</div>
-            <div className="dropdown-item">中央揃え</div>
-            <div className="dropdown-item">右揃え</div>
-          </div>
-        )}
-      </div>
+<div 
+  className={`menu-item ${activeMenu === 'format' ? 'active' : ''}`}
+  onClick={() => handleMenuClick('format')}
+>
+  書式
+  {activeMenu === 'format' && (
+    <div className="dropdown-content">
+      <div className="dropdown-item" onClick={() => handleMenuItemClick(onFormatCell)}>セルの書式...</div>
+      <div className="dropdown-separator"></div>
+      <div className="dropdown-item" onClick={() => handleMenuItemClick(onApplyBold)}>太字</div>
+      <div className="dropdown-item" onClick={() => handleMenuItemClick(onApplyItalic)}>斜体</div>
+      <div className="dropdown-item" onClick={() => handleMenuItemClick(onApplyUnderline)}>下線</div>
+      <div className="dropdown-separator"></div>
+      <div className="dropdown-item" onClick={() => handleMenuItemClick(onAlignLeft)}>左揃え</div>
+      <div className="dropdown-item" onClick={() => handleMenuItemClick(onAlignCenter)}>中央揃え</div>
+      <div className="dropdown-item" onClick={() => handleMenuItemClick(onAlignRight)}>右揃え</div>
+    </div>
+  )}
+</div>
       
       <div 
         className={`menu-item ${activeMenu === 'help' ? 'active' : ''}`}
