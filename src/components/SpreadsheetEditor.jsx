@@ -8,7 +8,6 @@ import 'handsontable/dist/handsontable.full.min.css';
 import { HyperFormula } from 'hyperformula';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
-import CSVImportModal from './modals/CSVImportModal';
 
 // コンポーネントのインポート
 import MenuBar from './MenuBar';
@@ -21,6 +20,8 @@ import OpenFileModal from './modals/OpenFileModal';
 import SaveAsModal from './modals/SaveAsModal';
 import AboutModal from './modals/AboutModal';
 import ShortcutsModal from './modals/ShortcutsModal';
+import CSVImportModal from './modals/CSVImportModal';
+import FormatCellModal from './modals/FormatCellModal';
 
 // すべてのHandsontableモジュールを登録
 registerAllModules();
@@ -78,6 +79,8 @@ const SpreadsheetEditor = () => {
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [showCSVImportModal, setShowCSVImportModal] = useState(false);
+  const [showFormatCellModal, setShowFormatCellModal] = useState(false);
+  const [currentCellStyles, setCurrentCellStyles] = useState({});
 
   // HyperFormulaインスタンス
   const [hyperformulaInstance] = useState(() => {
@@ -132,34 +135,112 @@ const SpreadsheetEditor = () => {
     updateSelectionStats(row, column, row2, column2);
   };
 
-// 数式バーからセルの更新
-const handleFormulaInputChange = (value) => {
-  setFormulaValue(value);
-};
+  // 数式バーからセルの更新
+  const handleFormulaInputChange = (value) => {
+    setFormulaValue(value);
+  };
 
-// 数式バーでEnterキーが押された時の処理
-const handleFormulaSubmit = () => {
-  const hot = hotRef.current.hotInstance;
-  if (selectedCell) {
-    hot.setDataAtCell(selectedCell.row, selectedCell.col, formulaValue);
-  }
-};
+  // 数式バーでEnterキーが押された時の処理
+  const handleFormulaSubmit = () => {
+    const hot = hotRef.current.hotInstance;
+    if (selectedCell) {
+      hot.setDataAtCell(selectedCell.row, selectedCell.col, formulaValue);
+    }
+  };
 
-// 書式メニュー処理の追加
-const handleFormatCellClick = () => {
-  // 書式ダイアログを表示するロジックをここに実装
-  // 今回は簡易的に直接書式を適用
-  if (selectionRange) {
-    // 例: 太字、左揃えを適用
-    applyStyleToSelection({ 
-      fontWeight: 'bold',
+  // 書式メニュー処理
+  const handleFormatCellClick = () => {
+    if (selectionRange) {
+      // 現在選択されているセルのスタイル情報を取得
+      const hot = hotRef.current.hotInstance;
+      const cellStyles = getCurrentCellStyles(hot, selectionRange);
+      
+      // スタイル情報をステートに保存
+      setCurrentCellStyles(cellStyles);
+      
+      // 書式設定モーダルを表示
+      setShowFormatCellModal(true);
+    } else {
+      updateStatusMessage('書式を適用するセルを選択してください', 3000);
+    }
+  };
+
+  // 現在のセルスタイルを取得する関数
+  const getCurrentCellStyles = (hot, range) => {
+    // 選択範囲から最初のセルの位置を取得
+    const [startRow, startCol] = [range.startRow, range.startCol];
+    
+    // セルのスタイル情報を初期化
+    const styles = {
+      fontWeight: 'normal',
+      fontStyle: 'normal',
+      textDecoration: 'none',
       textAlign: 'left'
-    });
+    };
+    
+    // セルのクラス名を取得
+    const cellKey = `${startRow},${startCol}`;
+    const className = cellStyles[currentSheet] && cellStyles[currentSheet][cellKey];
+    
+    if (className) {
+      // クラス名からスタイル情報を抽出
+      if (className.includes('font-bold')) {
+        styles.fontWeight = 'bold';
+      }
+      
+      if (className.includes('font-italic')) {
+        styles.fontStyle = 'italic';
+      }
+      
+      if (className.includes('text-underline')) {
+        styles.textDecoration = 'underline';
+      }
+      
+      if (className.includes('text-left')) {
+        styles.textAlign = 'left';
+      } else if (className.includes('text-center')) {
+        styles.textAlign = 'center';
+      } else if (className.includes('text-right')) {
+        styles.textAlign = 'right';
+      }
+    }
+    
+    return styles;
+  };
+
+  // 書式設定を適用する関数
+  const handleApplyFormat = (styleSettings) => {
+    // styleSettingsオブジェクトから必要なスタイル設定を抽出
+    const cellStyle = {};
+    
+    if (styleSettings.fontWeight === 'bold') {
+      cellStyle.fontWeight = 'bold';
+    }
+    
+    if (styleSettings.fontStyle === 'italic') {
+      cellStyle.fontStyle = 'italic';
+    }
+    
+    if (styleSettings.textDecoration === 'underline') {
+      cellStyle.textDecoration = 'underline';
+    }
+    
+    if (styleSettings.textAlign) {
+      cellStyle.textAlign = styleSettings.textAlign;
+    }
+    
+    // 書式を選択範囲に適用
+    applyStyleToSelection(cellStyle);
+    
+    // 色の設定も適用（現在のクラスベースの実装を拡張する必要があります）
+    if (styleSettings.color !== '#000000' || styleSettings.backgroundColor !== 'transparent') {
+      // 注意: 色の適用には、HTMLスタイルアトリビュートを使用するか、
+      // カスタムクラスを追加してCSSで定義する必要があります
+      console.log('Color settings:', styleSettings.color, styleSettings.backgroundColor);
+    }
+    
     updateStatusMessage('セルの書式を適用しました', 3000);
-  } else {
-    updateStatusMessage('書式を適用するセルを選択してください', 3000);
-  }
-};
+  };
 
   // 選択範囲の統計を更新
   const updateSelectionStats = (row, col, row2, col2) => {
@@ -320,40 +401,40 @@ const handleFormatCellClick = () => {
   };
 
   // 保存されたスタイルを適用
-const applyStoredStyles = () => {
-  if (!cellStyles[currentSheet]) return;
-  
-  const hot = hotRef.current.hotInstance;
-  const rows = hot.countRows();
-  const cols = hot.countCols();
-  
-  // セルのcellメタデータ配列を初期化
-  const cellConfig = [];
-  
-  // スタイル設定を追加
-  Object.entries(cellStyles[currentSheet]).forEach(([key, className]) => {
-    // キーからインデックスを取得し、数値に変換
-    const [rowStr, colStr] = key.split(',');
-    const row = parseInt(rowStr, 10);
-    const col = parseInt(colStr, 10);
+  const applyStoredStyles = () => {
+    if (!cellStyles[currentSheet]) return;
     
-    // 有効な数値であり、かつ範囲内であることを確認
-    if (!isNaN(row) && !isNaN(col) && row >= 0 && col >= 0 && row < rows && col < cols) {
-      cellConfig.push({
-        row: row,
-        col: col,
-        className: className.trim()
-      });
-    }
-  });
-  
-  // スタイルを一括適用
-  hot.updateSettings({
-    cell: cellConfig
-  });
-  
-  hot.render();
-};
+    const hot = hotRef.current.hotInstance;
+    const rows = hot.countRows();
+    const cols = hot.countCols();
+    
+    // セルのcellメタデータ配列を初期化
+    const cellConfig = [];
+    
+    // スタイル設定を追加
+    Object.entries(cellStyles[currentSheet]).forEach(([key, className]) => {
+      // キーからインデックスを取得し、数値に変換
+      const [rowStr, colStr] = key.split(',');
+      const row = parseInt(rowStr, 10);
+      const col = parseInt(colStr, 10);
+      
+      // 有効な数値であり、かつ範囲内であることを確認
+      if (!isNaN(row) && !isNaN(col) && row >= 0 && col >= 0 && row < rows && col < cols) {
+        cellConfig.push({
+          row: row,
+          col: col,
+          className: className.trim()
+        });
+      }
+    });
+    
+    // スタイルを一括適用
+    hot.updateSettings({
+      cell: cellConfig
+    });
+    
+    hot.render();
+  };
 
   // シート切り替え処理
   const switchSheet = (sheetId) => {
@@ -471,231 +552,231 @@ const applyStoredStyles = () => {
 
   // 選択範囲にスタイルを適用
   const applyStyleToSelection = (style) => {
-  const hot = hotRef.current.hotInstance;
-  const selection = hot.getSelected();
-  if (!selection) return;
-  
-  // 現在の選択範囲を保存
-  const currentSelection = [...selection[0]]; // [startRow, startCol, endRow, endCol]
-  
-  // 変更前の状態をアンドゥスタックに保存
-  pushToUndoStack();
-  
-  // 現在のセル設定を取得
-  const currentCellConfig = hot.getSettings().cell || [];
-  const cellConfig = [...currentCellConfig];
-  
-  selection.forEach(coords => {
-    const [row1, col1, row2, col2] = coords;
+    const hot = hotRef.current.hotInstance;
+    const selection = hot.getSelected();
+    if (!selection) return;
     
-    for (let row = Math.min(row1, row2); row <= Math.max(row1, row2); row++) {
-      for (let col = Math.min(col1, col2); col <= Math.max(col1, col2); col++) {
-        // 現在のセルスタイルを取得
-        const cellKey = `${row},${col}`;
-        const currentStyle = cellStyles[currentSheet][cellKey] || '';
-        let newClassName = currentStyle;
-        
-        // スタイルに応じてクラス名を更新
-        if (style.fontWeight === 'bold') {
-          if (!newClassName.includes('font-bold')) {
-            newClassName += ' font-bold';
+    // 現在の選択範囲を保存
+    const currentSelection = [...selection[0]]; // [startRow, startCol, endRow, endCol]
+    
+    // 変更前の状態をアンドゥスタックに保存
+    pushToUndoStack();
+    
+    // 現在のセル設定を取得
+    const currentCellConfig = hot.getSettings().cell || [];
+    const cellConfig = [...currentCellConfig];
+    
+    selection.forEach(coords => {
+      const [row1, col1, row2, col2] = coords;
+      
+      for (let row = Math.min(row1, row2); row <= Math.max(row1, row2); row++) {
+        for (let col = Math.min(col1, col2); col <= Math.max(col1, col2); col++) {
+          // 現在のセルスタイルを取得
+          const cellKey = `${row},${col}`;
+          const currentStyle = cellStyles[currentSheet][cellKey] || '';
+          let newClassName = currentStyle;
+          
+          // スタイルに応じてクラス名を更新
+          if (style.fontWeight === 'bold') {
+            if (!newClassName.includes('font-bold')) {
+              newClassName += ' font-bold';
+            }
+          } else if (style.fontWeight === 'normal') {
+            newClassName = newClassName.replace(/font-bold/g, '');
           }
-        } else if (style.fontWeight === 'normal') {
-          newClassName = newClassName.replace(/font-bold/g, '');
-        }
-        
-        if (style.fontStyle === 'italic') {
-          if (!newClassName.includes('font-italic')) {
-            newClassName += ' font-italic';
+          
+          if (style.fontStyle === 'italic') {
+            if (!newClassName.includes('font-italic')) {
+              newClassName += ' font-italic';
+            }
+          } else if (style.fontStyle === 'normal') {
+            newClassName = newClassName.replace(/font-italic/g, '');
           }
-        } else if (style.fontStyle === 'normal') {
-          newClassName = newClassName.replace(/font-italic/g, '');
-        }
-        
-        if (style.textDecoration === 'underline') {
-          if (!newClassName.includes('text-underline')) {
-            newClassName += ' text-underline';
+          
+          if (style.textDecoration === 'underline') {
+            if (!newClassName.includes('text-underline')) {
+              newClassName += ' text-underline';
+            }
+          } else if (style.textDecoration === 'none') {
+            newClassName = newClassName.replace(/text-underline/g, '');
           }
-        } else if (style.textDecoration === 'none') {
-          newClassName = newClassName.replace(/text-underline/g, '');
-        }
-        
-        // テキスト配置の設定
-        if (style.textAlign) {
+          
+          // テキスト配置の設定
+          if (style.textAlign) {
+            newClassName = newClassName
+              .replace(/text-left|text-center|text-right/g, '')
+              .trim();
+            newClassName += ` text-${style.textAlign}`;
+          }
+          
+          // クラス名の重複を防ぐためのクリーンアップ
           newClassName = newClassName
-            .replace(/text-left|text-center|text-right/g, '')
+            .split(' ')
+            .filter(Boolean)
+            .filter((value, index, self) => self.indexOf(value) === index)
+            .join(' ')
             .trim();
-          newClassName += ` text-${style.textAlign}`;
-        }
-        
-        // クラス名の重複を防ぐためのクリーンアップ
-        newClassName = newClassName
-          .split(' ')
-          .filter(Boolean)
-          .filter((value, index, self) => self.indexOf(value) === index)
-          .join(' ')
-          .trim();
-        
-        // cellConfigにセルのスタイル設定を追加
-        const existingIndex = cellConfig.findIndex(cell => cell.row === row && cell.col === col);
-        
-        if (existingIndex >= 0) {
-          cellConfig[existingIndex].className = newClassName;
-        } else {
-          cellConfig.push({
-            row: row,
-            col: col,
-            className: newClassName
+          
+          // cellConfigにセルのスタイル設定を追加
+          const existingIndex = cellConfig.findIndex(cell => cell.row === row && cell.col === col);
+          
+          if (existingIndex >= 0) {
+            cellConfig[existingIndex].className = newClassName;
+          } else {
+            cellConfig.push({
+              row: row,
+              col: col,
+              className: newClassName
+            });
+          }
+          
+          // スタイル情報を保存
+          setCellStyles(prevCellStyles => {
+            const updatedSheetStyles = {
+              ...(prevCellStyles[currentSheet] || {})
+            };
+            
+            if (newClassName) {
+              updatedSheetStyles[cellKey] = newClassName;
+            } else {
+              delete updatedSheetStyles[cellKey];
+            }
+            
+            return {
+              ...prevCellStyles,
+              [currentSheet]: updatedSheetStyles
+            };
           });
         }
-        
-        // スタイル情報を保存
-        setCellStyles(prevCellStyles => {
-          const updatedSheetStyles = {
-            ...(prevCellStyles[currentSheet] || {})
-          };
-          
-          if (newClassName) {
-            updatedSheetStyles[cellKey] = newClassName;
-          } else {
-            delete updatedSheetStyles[cellKey];
-          }
-          
-          return {
-            ...prevCellStyles,
-            [currentSheet]: updatedSheetStyles
-          };
-        });
-      }
-    }
-  });
-  
-  // 一括でスタイルを適用
-  hot.updateSettings({
-    cell: cellConfig
-  });
-  
-  // 明示的に再描画を強制
-  hot.render();
-  
-  // 選択範囲を復元
-  setTimeout(() => {
-    hot.selectCell(
-      currentSelection[0], 
-      currentSelection[1], 
-      currentSelection[2], 
-      currentSelection[3], 
-      false
-    );
-  }, 10);
-  
-  updateStatusMessage('書式を適用しました', 3000);
-};
-
-  // セルを結合
-const mergeCells = () => {
-  const hot = hotRef.current.hotInstance;
-  const selection = hot.getSelected();
-  if (selection) {
-    // 変更前の状態をアンドゥスタックに保存
-    pushToUndoStack();
-    
-    const [row1, col1, row2, col2] = selection[0];
-    
-    // MergeCellsプラグインを使用してセルを結合
-    const mergeCellsPlugin = hot.getPlugin('mergeCells');
-    if (mergeCellsPlugin) {
-      mergeCellsPlugin.merge(
-        Math.min(row1, row2),
-        Math.min(col1, col2),
-        Math.abs(row2 - row1) + 1,
-        Math.abs(col2 - col1) + 1
-      );
-      hot.render(); // 変更を反映するための再描画
-    } else {
-      console.error('MergeCellsプラグインが利用できません');
-    }
-  }
-};
-
-// セルの結合を解除
-const unmergeCells = () => {
-  const hot = hotRef.current.hotInstance;
-  const selection = hot.getSelected();
-  if (selection) {
-    // 変更前の状態をアンドゥスタックに保存
-    pushToUndoStack();
-    
-    const [row, col] = selection[0];
-    
-    // MergeCellsプラグインを使用して結合を解除
-    const mergeCellsPlugin = hot.getPlugin('mergeCells');
-    if (mergeCellsPlugin) {
-      // 最新のAPIでは unmerge メソッドを使用
-      // 選択範囲の座標を取得
-      const [startRow, startCol, endRow, endCol] = selection[0];
-      
-      // 選択範囲内のすべてのマージされたセルを解除
-      mergeCellsPlugin.unmerge(startRow, startCol, endRow, endCol);
-      
-      hot.render(); // 変更を反映するための再描画
-    } else {
-      console.error('MergeCellsプラグインが利用できません');
-    }
-  }
-};
-
-  // セルのクラスを設定するためのカスタム関数
-const cellClassRenderer = (instance, td, row, col, prop, value, cellProperties) => {
-  // デフォルトのレンダラーを適用
-  Handsontable.renderers.TextRenderer.apply(this, [instance, td, row, col, prop, value, cellProperties]);
-  
-  // セルのキー
-  const cellKey = `${row},${col}`;
-  
-  // このセルにスタイルがあるか確認
-  if (cellStyles[currentSheet] && cellStyles[currentSheet][cellKey]) {
-    const classes = cellStyles[currentSheet][cellKey].split(' ');
-    
-    classes.forEach(className => {
-      if (className) {
-        td.classList.add(className);
       }
     });
-  }
-  
-  return td;
-};
+    
+    // 一括でスタイルを適用
+    hot.updateSettings({
+      cell: cellConfig
+    });
+    
+    // 明示的に再描画を強制
+    hot.render();
+    
+    // 選択範囲を復元
+    setTimeout(() => {
+      hot.selectCell(
+        currentSelection[0], 
+        currentSelection[1], 
+        currentSelection[2], 
+        currentSelection[3], 
+        false
+      );
+    }, 10);
+    
+    updateStatusMessage('書式を適用しました', 3000);
+  };
+
+  // セルを結合
+  const mergeCells = () => {
+    const hot = hotRef.current.hotInstance;
+    const selection = hot.getSelected();
+    if (selection) {
+      // 変更前の状態をアンドゥスタックに保存
+      pushToUndoStack();
+      
+      const [row1, col1, row2, col2] = selection[0];
+      
+      // MergeCellsプラグインを使用してセルを結合
+      const mergeCellsPlugin = hot.getPlugin('mergeCells');
+      if (mergeCellsPlugin) {
+        mergeCellsPlugin.merge(
+          Math.min(row1, row2),
+          Math.min(col1, col2),
+          Math.abs(row2 - row1) + 1,
+          Math.abs(col2 - col1) + 1
+        );
+        hot.render(); // 変更を反映するための再描画
+      } else {
+        console.error('MergeCellsプラグインが利用できません');
+      }
+    }
+  };
+
+  // セルの結合を解除
+  const unmergeCells = () => {
+    const hot = hotRef.current.hotInstance;
+    const selection = hot.getSelected();
+    if (selection) {
+      // 変更前の状態をアンドゥスタックに保存
+      pushToUndoStack();
+      
+      const [row, col] = selection[0];
+      
+      // MergeCellsプラグインを使用して結合を解除
+      const mergeCellsPlugin = hot.getPlugin('mergeCells');
+      if (mergeCellsPlugin) {
+        // 最新のAPIでは unmerge メソッドを使用
+        // 選択範囲の座標を取得
+        const [startRow, startCol, endRow, endCol] = selection[0];
+        
+        // 選択範囲内のすべてのマージされたセルを解除
+        mergeCellsPlugin.unmerge(startRow, startCol, endRow, endCol);
+        
+        hot.render(); // 変更を反映するための再描画
+      } else {
+        console.error('MergeCellsプラグインが利用できません');
+      }
+    }
+  };
+
+  // セルのクラスを設定するためのカスタム関数
+  const cellClassRenderer = (instance, td, row, col, prop, value, cellProperties) => {
+    // デフォルトのレンダラーを適用
+    Handsontable.renderers.TextRenderer.apply(this, [instance, td, row, col, prop, value, cellProperties]);
+    
+    // セルのキー
+    const cellKey = `${row},${col}`;
+    
+    // このセルにスタイルがあるか確認
+    if (cellStyles[currentSheet] && cellStyles[currentSheet][cellKey]) {
+      const classes = cellStyles[currentSheet][cellKey].split(' ');
+      
+      classes.forEach(className => {
+        if (className) {
+          td.classList.add(className);
+        }
+      });
+    }
+    
+    return td;
+  };
 
   // スプレッドシートの設定
-const hotSettings = {
-  data: sheetData[currentSheet] || generateInitialData(100, 30),
-  rowHeaders: true,
-  colHeaders: true,
-  licenseKey: 'non-commercial-and-evaluation',
-  contextMenu: true,
-  manualColumnResize: true,
-  manualRowResize: true,
-  comments: true,
-  formulas: {
-    engine: hyperformulaInstance,
-    sheetName: currentSheet
-  },
-  stretchH: 'all',
-  autoWrapRow: true,
-  wordWrap: true,
-  // mergeCellsプラグインを確実に有効化
-  mergeCells: true,
-  fixedRowsTop: 0,
-  fixedColumnsLeft: 0,
-  minSpareRows: 5,
-  minSpareCols: 2,
-  afterSelectionEnd: handleAfterSelectionEnd,
-  afterChange: handleAfterChange,
-  className: 'htCustomStyles',
-  outsideClickDeselects: false,
-  cell: []
-};
+  const hotSettings = {
+    data: sheetData[currentSheet] || generateInitialData(100, 30),
+    rowHeaders: true,
+    colHeaders: true,
+    licenseKey: 'non-commercial-and-evaluation',
+    contextMenu: true,
+    manualColumnResize: true,
+    manualRowResize: true,
+    comments: true,
+    formulas: {
+      engine: hyperformulaInstance,
+      sheetName: currentSheet
+    },
+    stretchH: 'all',
+    autoWrapRow: true,
+    wordWrap: true,
+    // mergeCellsプラグインを確実に有効化
+    mergeCells: true,
+    fixedRowsTop: 0,
+    fixedColumnsLeft: 0,
+    minSpareRows: 5,
+    minSpareCols: 2,
+    afterSelectionEnd: handleAfterSelectionEnd,
+    afterChange: handleAfterChange,
+    className: 'htCustomStyles',
+    outsideClickDeselects: false,
+    cell: []
+  };
 
   // ローカルストレージから前回のデータを読み込む
   useEffect(() => {
@@ -895,195 +976,201 @@ const hotSettings = {
     }
   };
 
-// CSVエクスポート機能
-const exportCSV = () => {
-  const hot = hotRef.current.hotInstance;
-  
-  // 現在のシートのデータを取得
-  const currentData = hot.getData();
-  
-  try {
-    // CSVに変換
-    const csvContent = Papa.unparse(currentData, {
-      delimiter: ',',
-      header: false
-    });
+  // CSVエクスポート機能
+  const exportCSV = () => {
+    const hot = hotRef.current.hotInstance;
     
-    // iconv-liteを使用してUTF-8からShift_JISに変換
-    const shiftJisBuffer = iconv.encode(csvContent, 'Shift_JIS');
+    // 現在のシートのデータを取得
+    const currentData = hot.getData();
     
-    // Blobを作成してダウンロード
-    const blob = new Blob([shiftJisBuffer], { type: 'text/csv;charset=shift_jis' });
-    const url = URL.createObjectURL(blob);
-    
-    // ダウンロードリンクを作成
-    const link = document.createElement('a');
-    const now = new Date();
-    const dateStr = now.getFullYear() + 
-                   ('0' + (now.getMonth() + 1)).slice(-2) + 
-                   ('0' + now.getDate()).slice(-2);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `spreadsheet_export_${dateStr}.csv`);
-    link.style.visibility = 'hidden';
-    
-    // クリックを実行してダウンロード
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    updateStatusMessage('Shift_JIS形式でCSVファイルをエクスポートしました', 3000);
-  } catch (error) {
-    console.error('CSVエクスポートエラー:', error);
-    updateStatusMessage('CSVエクスポートに失敗しました', 5000);
-  }
-};
-
-  // Excelインポート用の関数 (importFile関数を修正)
-const importExcel = (acceptTypes = '.xlsx, .xls') => {
-  // ファイル選択ダイアログを作成
-  const fileInput = document.createElement('input');
-  fileInput.type = 'file';
-  fileInput.accept = acceptTypes;
-  
-  fileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const data = new Uint8Array(e.target.result);
+    try {
+      // CSVに変換
+      const csvContent = Papa.unparse(currentData, {
+        delimiter: ',',
+        header: false
+      });
       
-      try {
-        // Excel形式ファイルの処理（XLSX/XLS）
-        const workbook = XLSX.read(data, {
-          type: 'array',
-          cellDates: true,
-          cellStyles: true
-        });
-        
-        // 元のExcel処理コード
-        // ...
-        
-      } catch (error) {
-        console.error('ファイル読み込みエラー:', error);
-        updateStatusMessage(`エラー: ${file.name} の読み込みに失敗しました`, 5000);
-      }
-    };
+      // iconv-liteを使用してUTF-8からShift_JISに変換
+      const shiftJisBuffer = iconv.encode(csvContent, 'Shift_JIS');
+      
+      // Blobを作成してダウンロード
+      const blob = new Blob([shiftJisBuffer], { type: 'text/csv;charset=shift_jis' });
+      const url = URL.createObjectURL(blob);
+      
+      // ダウンロードリンクを作成
+      const link = document.createElement('a');
+      const now = new Date();
+      const dateStr = now.getFullYear() + 
+                     ('0' + (now.getMonth() + 1)).slice(-2) + 
+                     ('0' + now.getDate()).slice(-2);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `spreadsheet_export_${dateStr}.csv`);
+      link.style.visibility = 'hidden';
+      
+      // クリックを実行してダウンロード
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      updateStatusMessage('Shift_JIS形式でCSVファイルをエクスポートしました', 3000);
+    } catch (error) {
+      console.error('CSVエクスポートエラー:', error);
+      updateStatusMessage('CSVエクスポートに失敗しました', 5000);
+    }
+  };
+
+  // Excelインポート用の関数
+  const importExcel = (acceptTypes = '.xlsx, .xls') => {
+    // ファイル選択ダイアログを作成
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = acceptTypes;
     
-    reader.readAsArrayBuffer(file);
-  });
-  
-  // ファイル選択ダイアログを表示
-  fileInput.click();
-};
-
-// CSVインポート関数 (新しい関数)
-const importCSV = () => {
-  setShowCSVImportModal(true);
-};
-
-// CSVインポート処理 (既存の parseCSVAndLoad 関数を置き換え)
-const handleCSVImport = (csvText, parseOptions) => {
-  try {
-    // PapaParseを使用してCSVをパース
-    Papa.parse(csvText, {
-      ...parseOptions,
-      complete: (results) => {
-        if (results.data && results.data.length > 0) {
-          // 変更前の状態をアンドゥスタックに保存
-          pushToUndoStack();
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const data = new Uint8Array(e.target.result);
+        
+        try {
+          // Excel形式ファイルの処理（XLSX/XLS）
+          const workbook = XLSX.read(data, {
+            type: 'array',
+            cellDates: true,
+            cellStyles: true
+          });
           
-          // ヘッダー情報を処理
-          let data = results.data;
-          let headers = [];
+          // シート名のリストを取得
+          const sheetNames = workbook.SheetNames;
           
-          if (parseOptions.header) {
-            // ヘッダー行がある場合、結果からヘッダー情報を取得
-            headers = results.meta.fields || [];
+          // 各シートのデータを読み込む
+          const newSheetData = {...sheetData};
+          const newCellStyles = {...cellStyles};
+          
+          // 現在のシート数
+          const currentSheetCount = availableSheets.length;
+          let newSheets = [...availableSheets];
+          
+          sheetNames.forEach((sheetName, index) => {
+            // シート名を設定
+            const importedSheetId = `imported_sheet_${currentSheetCount + index + 1}`;
             
-            // オブジェクト配列から2次元配列に変換
-            data = data.map(row => {
-              return headers.map(header => row[header]);
-            });
+            // データを準備
+            const worksheet = workbook.Sheets[sheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
             
-            // ヘッダー行を先頭に追加
-            data.unshift(headers);
+            // シートデータを追加
+            newSheetData[importedSheetId] = jsonData;
+            newCellStyles[importedSheetId] = {};
+            
+            // シートリストに追加
+            newSheets.push(importedSheetId);
+          });
+          
+          // 状態を更新
+          setSheetData(newSheetData);
+          setCellStyles(newCellStyles);
+          setAvailableSheets(newSheets);
+          
+          // 最初にインポートしたシートを選択
+          if (sheetNames.length > 0) {
+            const importedSheetId = `imported_sheet_${currentSheetCount + 1}`;
+            switchSheet(importedSheetId);
           }
           
-          // 追加列の処理
-          if (parseOptions.ignoreFieldMismatch) {
-            // 行ごとの列数を揃える
-            const maxCols = data.reduce((max, row) => 
-              Math.max(max, Array.isArray(row) ? row.length : 0), 0);
+          updateStatusMessage(`${file.name} をインポートしました`, 3000);
+        } catch (error) {
+          console.error('ファイル読み込みエラー:', error);
+          updateStatusMessage(`エラー: ${file.name} の読み込みに失敗しました`, 5000);
+        }
+      };
+      
+      reader.readAsArrayBuffer(file);
+    });
+    
+    // ファイル選択ダイアログを表示
+    fileInput.click();
+  };
+
+  // CSVインポート処理
+  const handleCSVImport = (csvText, parseOptions) => {
+    try {
+      // PapaParseを使用してCSVをパース
+      Papa.parse(csvText, {
+        ...parseOptions,
+        complete: (results) => {
+          if (results.data && results.data.length > 0) {
+            // 変更前の状態をアンドゥスタックに保存
+            pushToUndoStack();
             
-            data = data.map(row => {
-              if (Array.isArray(row) && row.length < maxCols) {
-                return [...row, ...Array(maxCols - row.length).fill(null)];
-              }
-              return row;
-            });
-          }
-          
-          // 現在のシートデータを更新
-          setSheetData(prevSheetData => ({
-            ...prevSheetData,
-            [currentSheet]: data
-          }));
-          
-          const hot = hotRef.current.hotInstance;
-          hot.loadData(data);
-          
-          // エラーがあれば通知
-          if (results.errors && results.errors.length > 0) {
-            const errorMsg = `${results.errors.length}件のエラーが発生しました。最初のエラー: ${results.errors[0].message}`;
-            updateStatusMessage(errorMsg, 5000);
-            console.warn('CSVパースエラー:', results.errors);
+            // ヘッダー情報を処理
+            let data = results.data;
+            let headers = [];
+            
+            if (parseOptions.header) {
+              // ヘッダー行がある場合、結果からヘッダー情報を取得
+              headers = results.meta.fields || [];
+              
+              // オブジェクト配列から2次元配列に変換
+              data = data.map(row => {
+                return headers.map(header => row[header]);
+              });
+              
+              // ヘッダー行を先頭に追加
+              data.unshift(headers);
+            }
+            
+            // 追加列の処理
+            if (parseOptions.ignoreFieldMismatch) {
+              // 行ごとの列数を揃える
+              const maxCols = data.reduce((max, row) => 
+                Math.max(max, Array.isArray(row) ? row.length : 0), 0);
+              
+              data = data.map(row => {
+                if (Array.isArray(row) && row.length < maxCols) {
+                  return [...row, ...Array(maxCols - row.length).fill(null)];
+                }
+                return row;
+              });
+            }
+            
+            // 現在のシートデータを更新
+            setSheetData(prevSheetData => ({
+              ...prevSheetData,
+              [currentSheet]: data
+            }));
+            
+            const hot = hotRef.current.hotInstance;
+            hot.loadData(data);
+            
+            // エラーがあれば通知
+            if (results.errors && results.errors.length > 0) {
+              const errorMsg = `${results.errors.length}件のエラーが発生しました。最初のエラー: ${results.errors[0].message}`;
+              updateStatusMessage(errorMsg, 5000);
+              console.warn('CSVパースエラー:', results.errors);
+            } else {
+              updateStatusMessage('CSVファイルを読み込みました', 3000);
+            }
           } else {
-            updateStatusMessage('CSVファイルを読み込みました', 3000);
+            updateStatusMessage('CSVファイルにデータが含まれていません', 3000);
           }
-        } else {
-          updateStatusMessage('CSVファイルにデータが含まれていません', 3000);
+        },
+        error: (error) => {
+          console.error('CSVパースエラー:', error);
+          updateStatusMessage('CSVファイルの解析に失敗しました', 5000);
         }
-      },
-      error: (error) => {
-        console.error('CSVパースエラー:', error);
-        updateStatusMessage('CSVファイルの解析に失敗しました', 5000);
-      }
-    });
-  } catch (error) {
-    console.error('CSVインポートエラー:', error);
-    updateStatusMessage(`エラー: ${error.message}`, 5000);
-  }
-};
+      });
+    } catch (error) {
+      console.error('CSVインポートエラー:', error);
+      updateStatusMessage(`エラー: ${error.message}`, 5000);
+    }
+  };
 
-  // CSVファイルのパースと読み込み
-  const parseCSVAndLoad = (csvText) => {
-    Papa.parse(csvText, {
-      delimiter: ',',
-      header: false,
-      dynamicTyping: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        if (results.data && results.data.length > 0) {
-          // 変更前の状態をアンドゥスタックに保存
-          pushToUndoStack();
-          
-          // 現在のシートデータを更新
-          setSheetData(prevSheetData => ({
-            ...prevSheetData,
-            [currentSheet]: results.data
-          }));
-          
-          const hot = hotRef.current.hotInstance;
-          hot.loadData(results.data);
-          updateStatusMessage('CSVファイルを読み込みました', 3000);
-        }
-      },
-      error: (error) => {
-        console.error('CSVパースエラー:', error);
-        updateStatusMessage('CSVファイルの解析に失敗しました', 5000);
-      }
-    });
+  // CSVインポート関数
+  const importCSV = () => {
+    setShowCSVImportModal(true);
   };
 
   // 名前を付けて保存の処理
@@ -1284,118 +1371,117 @@ const handleCSVImport = (csvText, parseOptions) => {
     }
   };
 
-  // 置換処理
-  const handleReplace = () => {
-    const { searchText, replaceText, caseSensitive, wholeCell } = searchState;
+// 置換処理
+const handleReplace = () => {
+  const { searchText, replaceText, caseSensitive, wholeCell } = searchState;
+  
+  const hot = hotRef.current.hotInstance;
+  const selectedCell = hot.getSelected();
+  if (!selectedCell) {
+    updateStatusMessage('置換するセルが選択されていません', 3000);
+    return;
+  }
+  
+  // 変更前の状態をアンドゥスタックに保存
+  pushToUndoStack();
+  
+  const [row, col] = selectedCell[0];
+  const cellValue = hot.getDataAtCell(row, col);
+  
+  if (cellValue !== null && cellValue !== undefined) {
+    const cellText = String(cellValue);
     
-    const hot = hotRef.current.hotInstance;
-    const selectedCell = hot.getSelected();
-    if (!selectedCell) {
-      updateStatusMessage('置換するセルが選択されていません', 3000);
-      return;
-    }
-    
-    // 変更前の状態をアンドゥスタックに保存
-    pushToUndoStack();
-    
-    const [row, col] = selectedCell[0];
-    const cellValue = hot.getDataAtCell(row, col);
-    
-    if (cellValue !== null && cellValue !== undefined) {
-      const cellText = String(cellValue);
+    let newValue;
+    if (wholeCell) {
+      // セル全体が一致する場合は完全に置換
+      const match = caseSensitive
+        ? cellText === searchText
+        : cellText.toLowerCase() === searchText.toLowerCase();
       
-      let newValue;
-      if (wholeCell) {
-        // セル全体が一致する場合は完全に置換
-        const match = caseSensitive
-          ? cellText === searchText
-          : cellText.toLowerCase() === searchText.toLowerCase();
-        
-        if (match) {
-          newValue = replaceText;
-        }
-      } else {
-        // 部分一致の場合は該当部分のみ置換
-        if (caseSensitive) {
-          newValue = cellText.replace(searchText, replaceText);
-        } else {
-          newValue = cellText.replace(
-            new RegExp(searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\      // ファイル名を生成（現在の日時を含'), 'gi'),
-            replaceText
-          );
-        }
+      if (match) {
+        newValue = replaceText;
       }
-      
-      if (newValue !== undefined && newValue !== cellText) {
-        hot.setDataAtCell(row, col, newValue);
-        updateStatusMessage('置換しました', 3000);
+    } else {
+      // 部分一致の場合は該当部分のみ置換
+      if (caseSensitive) {
+        newValue = cellText.replace(searchText, replaceText);
       } else {
-        updateStatusMessage('置換対象が見つかりませんでした', 3000);
+        // 正規表現のエスケープ処理を修正
+        const escapedSearchText = searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(escapedSearchText, 'gi');
+        newValue = cellText.replace(regex, replaceText);
       }
     }
     
-    // 次の検索を実行
-    handleSearch();
-  };
+    if (newValue !== undefined && newValue !== cellText) {
+      hot.setDataAtCell(row, col, newValue);
+      updateStatusMessage('置換しました', 3000);
+    } else {
+      updateStatusMessage('置換対象が見つかりませんでした', 3000);
+    }
+  }
+  
+  // 次の検索を実行
+  handleSearch();
+};
 
-  // すべて置換処理
-  const handleReplaceAll = () => {
-    const { searchText, replaceText, caseSensitive, wholeCell } = searchState;
-    
-    if (!searchText) {
-      updateStatusMessage('検索する文字列を入力してください', 3000);
-      return;
-    }
-    
-    // 変更前の状態をアンドゥスタックに保存
-    pushToUndoStack();
-    
-    const hot = hotRef.current.hotInstance;
-    const data = hot.getData();
-    let replaceCount = 0;
-    
-    // すべてのセルをチェック
-    for (let row = 0; row < data.length; row++) {
-      for (let col = 0; col < data[row].length; col++) {
-        const cellValue = data[row][col];
+// すべて置換処理
+const handleReplaceAll = () => {
+  const { searchText, replaceText, caseSensitive, wholeCell } = searchState;
+  
+  if (!searchText) {
+    updateStatusMessage('検索する文字列を入力してください', 3000);
+    return;
+  }
+  
+  // 変更前の状態をアンドゥスタックに保存
+  pushToUndoStack();
+  
+  const hot = hotRef.current.hotInstance;
+  const data = hot.getData();
+  let replaceCount = 0;
+  
+  // すべてのセルをチェック
+  for (let row = 0; row < data.length; row++) {
+    for (let col = 0; col < data[row].length; col++) {
+      const cellValue = data[row][col];
+      
+      if (cellValue !== null && cellValue !== undefined) {
+        const cellText = String(cellValue);
         
-        if (cellValue !== null && cellValue !== undefined) {
-          const cellText = String(cellValue);
+        let newValue;
+        if (wholeCell) {
+          // セル全体が一致する場合は完全に置換
+          const match = caseSensitive
+            ? cellText === searchText
+            : cellText.toLowerCase() === searchText.toLowerCase();
           
-          let newValue;
-          if (wholeCell) {
-            // セル全体が一致する場合は完全に置換
-            const match = caseSensitive
-              ? cellText === searchText
-              : cellText.toLowerCase() === searchText.toLowerCase();
-            
-            if (match) {
-              newValue = replaceText;
-              replaceCount++;
-            }
-          } else {
-            // 部分一致の場合は該当部分のみ置換
-            const regex = new RegExp(
-              searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\      // ファイル名を生成（現在の日時を含'),
-              caseSensitive ? 'g' : 'gi'
-            );
-            
-            const matches = cellText.match(regex);
-            if (matches) {
-              newValue = cellText.replace(regex, replaceText);
-              replaceCount += matches.length;
-            }
+          if (match) {
+            newValue = replaceText;
+            replaceCount++;
           }
+        } else {
+          // 部分一致の場合は該当部分のみ置換
+          // 正規表現のエスケープ処理を修正
+          const escapedSearchText = searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regex = new RegExp(escapedSearchText, caseSensitive ? 'g' : 'gi');
           
-          if (newValue !== undefined && newValue !== cellText) {
-            hot.setDataAtCell(row, col, newValue);
+          const matches = cellText.match(regex);
+          if (matches) {
+            newValue = cellText.replace(regex, replaceText);
+            replaceCount += matches.length;
           }
+        }
+        
+        if (newValue !== undefined && newValue !== cellText) {
+          hot.setDataAtCell(row, col, newValue);
         }
       }
     }
-    
-    updateStatusMessage(`${replaceCount}件置換しました`, 3000);
-  };
+  }
+  
+  updateStatusMessage(`${replaceCount}件置換しました`, 3000);
+};
   
   return (
     <div className="spreadsheet-container">
@@ -1408,32 +1494,32 @@ const handleCSVImport = (csvText, parseOptions) => {
       </div>
       
       <MenuBar 
-  onNewFile={() => {
-    if (window.confirm('新しいスプレッドシートを作成しますか？現在のデータは保存されていない場合、失われます。')) {
-      resetSpreadsheet();
-    }
-  }}
-  onOpenFile={() => setShowOpenFileModal(true)}
-  onSave={handleSave}
-  onSaveAs={() => setShowSaveAsModal(true)}
-  onImportCSV={importCSV}
-  onImportExcel={() => importExcel('.xlsx, .xls')}
-  onExportCSV={exportCSV}
-  onExportExcel={exportExcel}
-  onPrint={() => window.print()}
-  onUndo={undo}
-  onRedo={redo}
-  onSearch={() => setShowSearchModal(true)}
-  onAbout={() => setShowAboutModal(true)}
-  onShortcuts={() => setShowShortcutsModal(true)}
-  onFormatCell={handleFormatCellClick}
-  onApplyBold={() => applyStyleToSelection({ fontWeight: 'bold' })}
-  onApplyItalic={() => applyStyleToSelection({ fontStyle: 'italic' })}
-  onApplyUnderline={() => applyStyleToSelection({ textDecoration: 'underline' })}
-  onAlignLeft={() => applyStyleToSelection({ textAlign: 'left' })}
-  onAlignCenter={() => applyStyleToSelection({ textAlign: 'center' })}
-  onAlignRight={() => applyStyleToSelection({ textAlign: 'right' })}
-/>
+        onNewFile={() => {
+          if (window.confirm('新しいスプレッドシートを作成しますか？現在のデータは保存されていない場合、失われます。')) {
+            resetSpreadsheet();
+          }
+        }}
+        onOpenFile={() => setShowOpenFileModal(true)}
+        onSave={handleSave}
+        onSaveAs={() => setShowSaveAsModal(true)}
+        onImportCSV={importCSV}
+        onImportExcel={() => importExcel('.xlsx, .xls')}
+        onExportCSV={exportCSV}
+        onExportExcel={exportExcel}
+        onPrint={() => window.print()}
+        onUndo={undo}
+        onRedo={redo}
+        onSearch={() => setShowSearchModal(true)}
+        onAbout={() => setShowAboutModal(true)}
+        onShortcuts={() => setShowShortcutsModal(true)}
+        onFormatCell={handleFormatCellClick}
+        onApplyBold={() => applyStyleToSelection({ fontWeight: 'bold' })}
+        onApplyItalic={() => applyStyleToSelection({ fontStyle: 'italic' })}
+        onApplyUnderline={() => applyStyleToSelection({ textDecoration: 'underline' })}
+        onAlignLeft={() => applyStyleToSelection({ textAlign: 'left' })}
+        onAlignCenter={() => applyStyleToSelection({ textAlign: 'center' })}
+        onAlignRight={() => applyStyleToSelection({ textAlign: 'right' })}
+      />
       
       <Toolbar 
         onNew={() => {
@@ -1459,10 +1545,10 @@ const handleCSVImport = (csvText, parseOptions) => {
       />
       
       <FormulaBar 
-  cellAddress={cellAddress}
-  value={formulaValue}
-  onChange={setFormulaValue}
-  onSubmit={handleFormulaSubmit}
+        cellAddress={cellAddress}
+        value={formulaValue}
+        onChange={setFormulaValue}
+        onSubmit={handleFormulaSubmit}
       />
       
       <SheetTabs 
@@ -1528,6 +1614,14 @@ const handleCSVImport = (csvText, parseOptions) => {
         <CSVImportModal 
           onClose={() => setShowCSVImportModal(false)}
           onImport={handleCSVImport}
+        />
+      )}
+      
+      {showFormatCellModal && (
+        <FormatCellModal 
+          onClose={() => setShowFormatCellModal(false)}
+          onApplyFormat={handleApplyFormat}
+          initialStyles={currentCellStyles}
         />
       )}
     </div>

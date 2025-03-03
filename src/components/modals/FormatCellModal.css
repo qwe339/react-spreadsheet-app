@@ -1,0 +1,86 @@
+.format-preview {
+  padding: 15px;
+  margin-bottom: 15px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  min-height: 50px;
+  text-align: center;
+}
+
+.format-section {
+  margin-bottom: 15px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.format-section h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 16px;
+  color: #555;
+}
+
+.format-group {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.format-group label {
+  min-width: 120px;
+  margin-right: 10px;
+  font-weight: normal;
+}
+
+.button-toolbar {
+  display: flex;
+  gap: 5px;
+}
+
+.button-toolbar button {
+  padding: 5px 10px;
+  background-color: white;
+  border: 1px solid #ddd;
+  cursor: pointer;
+  min-width: 30px;
+  border-radius: 3px;
+}
+
+.button-toolbar button:hover {
+  background-color: #f5f5f5;
+}
+
+.button-toolbar button.active {
+  background-color: #e3f2fd;
+  border-color: #1976d2;
+  color: #1976d2;
+}
+
+.format-group select {
+  padding: 5px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  width: 100px;
+}
+
+.format-group input[type="color"] {
+  padding: 0;
+  border: 1px solid #ddd;
+  width: 50px;
+  height: 30px;
+  border-radius: 3px;
+}
+
+.small-button {
+  margin-left: 10px;
+  padding: 3px 8px;
+  font-size: 12px;
+  background-color: #f0f0f0;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.small-button:hover {
+  background-color: #e0e0e0;
+}
