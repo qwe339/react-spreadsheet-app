@@ -12,228 +12,6 @@ export const FILE_MENU = {
       shortcut: 'Ctrl+N',
       icon: '+'
     },
-    { type: 'separator' },
-    {
-      id: 'formatNumberGeneral',
-      label: '標準',
-      checkable: true,
-      group: 'number'
-    },
-    {
-      id: 'formatNumberPercent',
-      label: 'パーセント',
-      icon: '%',
-      checkable: true,
-      group: 'number'
-    },
-    {
-      id: 'formatNumberCurrency',
-      label: '通貨',
-      icon: '¥',
-      checkable: true,
-      group: 'number'
-    },
-    {
-      id: 'formatNumberDate',
-      label: '日付',
-      icon: '📅',
-      checkable: true,
-      group: 'number'
-    },
-    {
-      id: 'formatNumberTime',
-      label: '時刻',
-      icon: '🕒',
-      checkable: true,
-      group: 'number'
-    },
-    {
-      id: 'formatNumberCustom',
-      label: 'ユーザー設定...',
-      icon: '🔧',
-      checkable: true,
-      group: 'number'
-    },
-    { type: 'separator' },
-    {
-      id: 'formatConditional',
-      label: '条件付き書式...',
-      icon: '🎯'
-    },
-    { type: 'separator' },
-    {
-      id: 'mergeCells',
-      label: 'セルを結合',
-      icon: '⊞'
-    },
-    {
-      id: 'unmergeCells',
-      label: '結合を解除',
-      icon: '⊟'
-    }
-  ]
-};
-
-export const DATA_MENU = {
-  id: 'data',
-  label: 'データ',
-  items: [
-    {
-      id: 'dataSortAsc',
-      label: '昇順ソート',
-      icon: 'A→Z'
-    },
-    {
-      id: 'dataSortDesc',
-      label: '降順ソート',
-      icon: 'Z→A'
-    },
-    {
-      id: 'dataSortCustom',
-      label: 'カスタムソート...',
-      icon: '↕️'
-    },
-    { type: 'separator' },
-    {
-      id: 'dataFilterToggle',
-      label: 'フィルター切替',
-      icon: '🔍',
-      checkable: true
-    },
-    {
-      id: 'dataClearFilter',
-      label: 'フィルターをクリア',
-      icon: '🔍❌'
-    },
-    { type: 'separator' },
-    {
-      id: 'dataValidation',
-      label: 'データの入力規則...',
-      icon: '✓'
-    },
-    { type: 'separator' },
-    {
-      id: 'dataRemoveDuplicates',
-      label: '重複データの削除...',
-      icon: '🔄'
-    },
-    {
-      id: 'dataCleanupTools',
-      label: 'データクリーニング...',
-      icon: '🧹'
-    },
-    { type: 'separator' },
-    {
-      id: 'dataGroupRows',
-      label: '行をグループ化',
-      icon: '📎'
-    },
-    {
-      id: 'dataUngroupRows',
-      label: '行のグループ化を解除',
-      icon: '📎❌'
-    }
-  ]
-};
-
-export const TOOLS_MENU = {
-  id: 'tools',
-  label: 'ツール',
-  items: [
-    {
-      id: 'toolsSpellCheck',
-      label: 'スペルチェック',
-      icon: '📝'
-    },
-    { type: 'separator' },
-    {
-      id: 'toolsProtectSheet',
-      label: 'シートの保護...',
-      icon: '🔒'
-    },
-    {
-      id: 'toolsProtectCells',
-      label: 'セルの保護...',
-      icon: '🔒'
-    },
-    {
-      id: 'toolsUnprotectSheet',
-      label: 'シートの保護を解除',
-      icon: '🔓'
-    },
-    { type: 'separator' },
-    {
-      id: 'toolsAutosum',
-      label: 'オートSUM',
-      shortcut: 'Alt+=',
-      icon: 'Σ'
-    },
-    {
-      id: 'toolsFormulas',
-      label: '数式ライブラリ...',
-      icon: 'ƒ'
-    },
-    {
-      id: 'toolsFormulasRecalc',
-      label: '数式の再計算',
-      shortcut: 'F9',
-      icon: '🔄'
-    },
-    { type: 'separator' },
-    {
-      id: 'toolsGoalSeek',
-      label: 'ゴールシーク...',
-      icon: '🎯'
-    },
-    {
-      id: 'toolsSolver',
-      label: 'ソルバー...',
-      icon: '📊'
-    }
-  ]
-};
-
-export const HELP_MENU = {
-  id: 'help',
-  label: 'ヘルプ',
-  items: [
-    {
-      id: 'helpDocumentation',
-      label: 'ドキュメント',
-      icon: '📚'
-    },
-    {
-      id: 'helpShortcuts',
-      label: 'キーボードショートカット',
-      icon: '⌨️'
-    },
-    { type: 'separator' },
-    {
-      id: 'helpFeedback',
-      label: 'フィードバックを送信',
-      icon: '📧'
-    },
-    { type: 'separator' },
-    {
-      id: 'helpAbout',
-      label: 'バージョン情報',
-      icon: 'ℹ️'
-    }
-  ]
-};
-
-export const ALL_MENUS = [
-  FILE_MENU,
-  EDIT_MENU,
-  VIEW_MENU,
-  INSERT_MENU,
-  FORMAT_MENU,
-  DATA_MENU,
-  TOOLS_MENU,
-  HELP_MENU
-];
-
-export default ALL_MENUS;
     {
       id: 'open',
       label: '開く...',
@@ -523,3 +301,225 @@ export const FORMAT_MENU = {
       checkable: true,
       group: 'align'
     },
+    { type: 'separator' },
+    {
+      id: 'formatNumberGeneral',
+      label: '標準',
+      checkable: true,
+      group: 'number'
+    },
+    {
+      id: 'formatNumberPercent',
+      label: 'パーセント',
+      icon: '%',
+      checkable: true,
+      group: 'number'
+    },
+    {
+      id: 'formatNumberCurrency',
+      label: '通貨',
+      icon: '¥',
+      checkable: true,
+      group: 'number'
+    },
+    {
+      id: 'formatNumberDate',
+      label: '日付',
+      icon: '📅',
+      checkable: true,
+      group: 'number'
+    },
+    {
+      id: 'formatNumberTime',
+      label: '時刻',
+      icon: '🕒',
+      checkable: true,
+      group: 'number'
+    },
+    {
+      id: 'formatNumberCustom',
+      label: 'ユーザー設定...',
+      icon: '🔧',
+      checkable: true,
+      group: 'number'
+    },
+    { type: 'separator' },
+    {
+      id: 'formatConditional',
+      label: '条件付き書式...',
+      icon: '🎯'
+    },
+    { type: 'separator' },
+    {
+      id: 'mergeCells',
+      label: 'セルを結合',
+      icon: '⊞'
+    },
+    {
+      id: 'unmergeCells',
+      label: '結合を解除',
+      icon: '⊟'
+    }
+  ]
+};
+
+export const DATA_MENU = {
+  id: 'data',
+  label: 'データ',
+  items: [
+    {
+      id: 'dataSortAsc',
+      label: '昇順ソート',
+      icon: 'A→Z'
+    },
+    {
+      id: 'dataSortDesc',
+      label: '降順ソート',
+      icon: 'Z→A'
+    },
+    {
+      id: 'dataSortCustom',
+      label: 'カスタムソート...',
+      icon: '↕️'
+    },
+    { type: 'separator' },
+    {
+      id: 'dataFilterToggle',
+      label: 'フィルター切替',
+      icon: '🔍',
+      checkable: true
+    },
+    {
+      id: 'dataClearFilter',
+      label: 'フィルターをクリア',
+      icon: '🔍❌'
+    },
+    { type: 'separator' },
+    {
+      id: 'dataValidation',
+      label: 'データの入力規則...',
+      icon: '✓'
+    },
+    { type: 'separator' },
+    {
+      id: 'dataRemoveDuplicates',
+      label: '重複データの削除...',
+      icon: '🔄'
+    },
+    {
+      id: 'dataCleanupTools',
+      label: 'データクリーニング...',
+      icon: '🧹'
+    },
+    { type: 'separator' },
+    {
+      id: 'dataGroupRows',
+      label: '行をグループ化',
+      icon: '📎'
+    },
+    {
+      id: 'dataUngroupRows',
+      label: '行のグループ化を解除',
+      icon: '📎❌'
+    }
+  ]
+};
+
+export const TOOLS_MENU = {
+  id: 'tools',
+  label: 'ツール',
+  items: [
+    {
+      id: 'toolsSpellCheck',
+      label: 'スペルチェック',
+      icon: '📝'
+    },
+    { type: 'separator' },
+    {
+      id: 'toolsProtectSheet',
+      label: 'シートの保護...',
+      icon: '🔒'
+    },
+    {
+      id: 'toolsProtectCells',
+      label: 'セルの保護...',
+      icon: '🔒'
+    },
+    {
+      id: 'toolsUnprotectSheet',
+      label: 'シートの保護を解除',
+      icon: '🔓'
+    },
+    { type: 'separator' },
+    {
+      id: 'toolsAutosum',
+      label: 'オートSUM',
+      shortcut: 'Alt+=',
+      icon: 'Σ'
+    },
+    {
+      id: 'toolsFormulas',
+      label: '数式ライブラリ...',
+      icon: 'ƒ'
+    },
+    {
+      id: 'toolsFormulasRecalc',
+      label: '数式の再計算',
+      shortcut: 'F9',
+      icon: '🔄'
+    },
+    { type: 'separator' },
+    {
+      id: 'toolsGoalSeek',
+      label: 'ゴールシーク...',
+      icon: '🎯'
+    },
+    {
+      id: 'toolsSolver',
+      label: 'ソルバー...',
+      icon: '📊'
+    }
+  ]
+};
+
+export const HELP_MENU = {
+  id: 'help',
+  label: 'ヘルプ',
+  items: [
+    {
+      id: 'helpDocumentation',
+      label: 'ドキュメント',
+      icon: '📚'
+    },
+    {
+      id: 'helpShortcuts',
+      label: 'キーボードショートカット',
+      icon: '⌨️'
+    },
+    { type: 'separator' },
+    {
+      id: 'helpFeedback',
+      label: 'フィードバックを送信',
+      icon: '📧'
+    },
+    { type: 'separator' },
+    {
+      id: 'helpAbout',
+      label: 'バージョン情報',
+      icon: 'ℹ️'
+    }
+  ]
+};
+
+export const ALL_MENUS = [
+  FILE_MENU,
+  EDIT_MENU,
+  VIEW_MENU,
+  INSERT_MENU,
+  FORMAT_MENU,
+  DATA_MENU,
+  TOOLS_MENU,
+  HELP_MENU
+];
+
+export default ALL_MENUS;

@@ -293,6 +293,8 @@ const useCellFormatting = () => {
                 console.error('条件式の評価エラー:', e);
               }
               break;
+            default:
+              break;
           }
           
           // 条件が満たされた場合、スタイルを適用
@@ -354,3 +356,6 @@ const useCellFormatting = () => {
     removeConditionalFormat,
     applyConditionalFormatting
   };
+};
+
+export default useCellFormatting;
