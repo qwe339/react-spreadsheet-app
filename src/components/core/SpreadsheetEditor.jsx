@@ -4,6 +4,7 @@ import { HotTable } from '@handsontable/react';
 import { registerAllModules } from 'handsontable/registry';
 import Handsontable from 'handsontable';
 import 'handsontable/dist/handsontable.full.min.css';
+import { HyperFormula } from 'hyperformula';
 
 // コンテキスト
 import { useSpreadsheet } from '../../context/SpreadsheetContext';
@@ -56,7 +57,14 @@ import './SpreadsheetEditor.css';
 // すべてのHandsontableモジュールを登録
 registerAllModules();
 
+/**
+ * 拡張スプレッドシートエディタのメインコンポーネント
+ * 
+ * @returns {JSX.Element} スプレッドシートエディタのUIコンポーネント
+ */
 const SpreadsheetEditor = () => {
+  // ===== 参照と状態の定義 =====
+  
   // Handsontableの参照
   const hotRef = useRef(null);
 
@@ -69,10 +77,11 @@ const SpreadsheetEditor = () => {
   const cellFeatures = useCellFeatures();
   const charts = useCharts();
 
-  // 状態
+  // UI状態
   const [activeCommentCell, setActiveCommentCell] = useState(null);
   const [hoveredCell, setHoveredCell] = useState(null);
   const [isFormulaEditing, setIsFormulaEditing] = useState(false);
+  const [currentCellStyles, setCurrentCellStyles] = useState({});
 
   // モーダルの表示状態
   const [showAboutModal, setShowAboutModal] = useState(false);
@@ -88,9 +97,6 @@ const SpreadsheetEditor = () => {
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
 
-  // 現在選択されているセルの書式設定
-  const [currentCellStyles, setCurrentCellStyles] = useState({});
-
   // 検索関連の状態
   const [searchState, setSearchState] = useState({
     searchText: '',
@@ -100,11 +106,10 @@ const SpreadsheetEditor = () => {
     searchPosition: { row: 0, col: 0 }
   });
 
-  // デストラクチャリングで状態とアクションを取得
+  // スプレッドシートデータをカスタムフックから取得
   const {
     currentSheet,
     sheets,
-    sheetData,
     currentSheetData,
     selectedCell,
     selectionRange,
@@ -133,29 +138,27 @@ const SpreadsheetEditor = () => {
     setLastSaved
   } = spreadsheetData;
 
+  // アンドゥ・リドゥ機能
   const {
-    undoStack,
-    redoStack,
     pushToUndoStack,
     undo,
     redo,
     clearUndoRedoStack
   } = undoRedo;
 
+  // セルの書式設定
   const {
-    cellStyles,
     currentSheetStyles,
-    conditionalFormats,
     currentSheetConditionalFormats,
     getCellStyle,
     applyStyleToSelection,
-    applyStylesToHandsontable,
     applyCurrentSheetStyles,
     addConditionalFormat,
     removeConditionalFormat,
     applyConditionalFormatting
   } = cellFormatting;
   
+  // ファイル操作
   const {
     saveToLocalStorage,
     saveAs,
@@ -167,28 +170,20 @@ const SpreadsheetEditor = () => {
     exportExcel
   } = fileIO;
 
+  // セル機能（コメント、保護、データ検証）
   const {
-    comments,
     currentSheetComments,
-    protectedCells,
-    currentSheetProtectedCells,
-    dataValidations,
-    currentSheetDataValidations,
     addCommentToCurrentSheet,
     updateCommentInCurrentSheet,
     removeCommentFromCurrentSheet,
     getCommentFromCurrentSheet,
-    protectCellsInCurrentSheet,
-    unprotectCellsInCurrentSheet,
-    protectRange,
-    unprotectRange,
     isCellProtectedInCurrentSheet,
     addDataValidationToCurrentSheet,
-    removeDataValidationFromCurrentSheet,
     getDataValidationFromCurrentSheet,
     validateCellValueInCurrentSheet
   } = cellFeatures;
 
+  // チャート機能
   const {
     currentSheetCharts,
     addChart,
@@ -198,7 +193,31 @@ const SpreadsheetEditor = () => {
     createChartConfig
   } = charts;
 
-  // ページタイトルとファイル名を更新
+  // ===== 副作用（useEffect）=====
+
+  // HyperFormulaの初期化
+ useEffect(() => {
+  if (!state.hyperformulaInstance) {
+    try {
+      // HyperFormulaインスタンスを作成
+      const hfInstance = HyperFormula.buildEmpty({
+        licenseKey: 'non-commercial-and-evaluation'
+      });
+      
+      // 状態に保存
+      dispatch({
+        type: actionTypes.SET_HYPERFORMULA_INSTANCE,
+        payload: hfInstance
+      });
+      
+      console.log('HyperFormulaが正常に初期化されました');
+    } catch (error) {
+      console.error('HyperFormula初期化エラー:', error);
+    }
+  }
+}, []);
+
+  // ページタイトルの更新
   useEffect(() => {
     document.title = isModified 
       ? `*${currentFilename} - 拡張スプレッドシート` 
@@ -209,6 +228,7 @@ const SpreadsheetEditor = () => {
   useEffect(() => {
     const hot = hotRef.current?.hotInstance;
     if (hot) {
+      // データを読み込み
       hot.loadData(currentSheetData);
       
       // フォーミュラプラグインのシート名を更新
@@ -218,25 +238,22 @@ const SpreadsheetEditor = () => {
         }
       });
       
-      // スタイルを適用
+      // スタイルと条件付き書式を適用（非同期で処理）
       setTimeout(() => {
         applyCurrentSheetStyles(hot);
-        
-        // 条件付き書式も適用
         applyConditionalFormatting(hot);
       }, 0);
     }
   }, [currentSheet, currentSheetData, applyCurrentSheetStyles, applyConditionalFormatting]);
 
-  // Handsontable読み込み後の処理
+  // Handsontable初期化後の処理
   useEffect(() => {
-    if (hotRef.current?.hotInstance) {
-      // スタイルを適用
+    const hot = hotRef.current?.hotInstance;
+    if (hot) {
+      // スタイルと条件付き書式を適用
       setTimeout(() => {
-        applyCurrentSheetStyles(hotRef.current.hotInstance);
-        
-        // 条件付き書式も適用
-        applyConditionalFormatting(hotRef.current.hotInstance);
+        applyCurrentSheetStyles(hot);
+        applyConditionalFormatting(hot);
       }, 0);
     }
   }, [hotRef.current, applyCurrentSheetStyles, applyConditionalFormatting]);
@@ -253,24 +270,20 @@ const SpreadsheetEditor = () => {
       const shortcut = findShortcutByKeyEvent(e);
       if (shortcut) {
         e.preventDefault();
-        
-        // ショートカットのアクションを実行
         handleShortcutAction(shortcut.action);
       }
     };
     
+    // イベントリスナーを登録
     window.addEventListener('keydown', handleKeyDown);
     
+    // クリーンアップ
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [
-    undoStack, 
-    redoStack, 
-    currentSheet, 
-    sheetData, 
-    isFormulaEditing
-  ]);
+  }, [isFormulaEditing]);
+
+  // ===== イベントハンドラー =====
 
   // ショートカットアクションのハンドラー
   const handleShortcutAction = (action) => {
@@ -314,23 +327,23 @@ const SpreadsheetEditor = () => {
         if (hot) applyStyleToSelection(hot, { textDecoration: 'underline' });
         break;
       default:
-        // 未実装のショートカット
+        console.log('未実装のショートカット:', action);
         break;
     }
   };
 
   // セル選択時のイベントハンドラー
   const handleAfterSelectionEnd = (row, column, row2, column2) => {
-    // セルのアドレスを更新
+    // セルアドレスを更新（例: A1）
     const colLabel = numToLetter(column);
     setCellAddress(`${colLabel}${row + 1}`);
     
-    // セルの値を取得
+    // セルの値を取得してフォーミュラバーに表示
     const hot = hotRef.current.hotInstance;
     const value = hot.getDataAtCell(row, column);
     setFormulaValue(value !== null ? value : '');
     
-    // 選択範囲を設定
+    // 選択範囲を更新
     setSelectedCell({ row, col: column });
     setSelectionRange({ startRow: row, startCol: column, endRow: row2, endCol: column2 });
     
@@ -342,7 +355,7 @@ const SpreadsheetEditor = () => {
     setCurrentCellStyles(cellStyle);
   };
 
-  // 数式バーからセルの更新
+  // 数式バーの値変更ハンドラー
   const handleFormulaInputChange = (value) => {
     setFormulaValue(value);
   };
@@ -354,6 +367,7 @@ const SpreadsheetEditor = () => {
       // 変更前の状態をアンドゥスタックに保存
       pushToUndoStack(hot);
       
+      // セルの値を更新
       hot.setDataAtCell(selectedCell.row, selectedCell.col, formulaValue);
       
       // 編集モードを終了
@@ -361,12 +375,12 @@ const SpreadsheetEditor = () => {
     }
   };
 
-  // 選択範囲の統計を更新
+  // 選択範囲の統計情報を更新
   const updateCellSelectionStats = (row, col, row2, col2) => {
     const hot = hotRef.current.hotInstance;
     const selText = `${numToLetter(col)}${row + 1}:${numToLetter(col2)}${row2 + 1}`;
     
-    // 選択範囲の数値の合計と平均を計算
+    // 選択範囲の数値を収集
     const selectedValues = [];
     for (let r = Math.min(row, row2); r <= Math.max(row, row2); r++) {
       for (let c = Math.min(col, col2); c <= Math.max(col, col2); c++) {
@@ -377,6 +391,7 @@ const SpreadsheetEditor = () => {
       }
     }
     
+    // 統計情報を計算
     if (selectedValues.length > 0) {
       const sum = selectedValues.reduce((a, b) => a + b, 0);
       const average = sum / selectedValues.length;
@@ -401,8 +416,9 @@ const SpreadsheetEditor = () => {
   const handleAfterChange = (changes, source) => {
     if (!changes || source === 'loadData') return;
     
-    // 変更前の状態をアンドゥスタックに保存
     const hot = hotRef.current.hotInstance;
+    
+    // 変更前の状態をアンドゥスタックに保存
     pushToUndoStack(hot);
     
     // シートデータを更新
@@ -413,7 +429,6 @@ const SpreadsheetEditor = () => {
     
     // データ検証を適用
     for (const [row, col, oldValue, newValue] of changes) {
-      // セルのデータ検証ルールを取得
       const validation = getDataValidationFromCurrentSheet(row, col);
       
       if (validation) {
@@ -421,12 +436,13 @@ const SpreadsheetEditor = () => {
         const { isValid, message } = validateCellValueInCurrentSheet(row, col, newValue);
         
         if (!isValid) {
-          // 無効な場合は、元の値に戻すかユーザーに確認
+          // データ検証に失敗した場合の処理
           if (validation.rejectInvalid) {
+            // 変更を拒否して元の値に戻す
             hot.setDataAtCell(row, col, oldValue);
             updateStatusMessage(`検証エラー: ${message}`, 5000);
           } else {
-            // エラーを表示するが値は保持
+            // 警告のみ表示
             updateStatusMessage(`警告: ${message}`, 5000);
           }
         }
@@ -456,7 +472,7 @@ const SpreadsheetEditor = () => {
   // セルからマウスが出た時の処理
   const handleCellMouseOut = () => {
     setHoveredCell(null);
-    // コメントを少し遅延して非表示に（即座に非表示にすると、コメント上にマウスを移動できない）
+    // コメントを少し遅延して非表示に
     setTimeout(() => {
       if (!hoveredCell) {
         setActiveCommentCell(null);
@@ -482,10 +498,10 @@ const SpreadsheetEditor = () => {
     // デフォルトのレンダラーを適用
     Handsontable.renderers.TextRenderer.apply(this, [instance, td, row, col, prop, value, cellProperties]);
     
-    // セルキー
+    // セルキー（位置を表す文字列）
     const cellKey = `${row},${col}`;
     
-    // スタイルがあれば適用
+    // セルにスタイルを適用
     if (currentSheetStyles && currentSheetStyles[cellKey]) {
       const classes = currentSheetStyles[cellKey].split(' ');
       classes.forEach(className => {
@@ -495,7 +511,7 @@ const SpreadsheetEditor = () => {
       });
     }
     
-    // セルにコメントがあるかどうかを示すマーカー
+    // コメントマーカーの表示
     const comment = getCommentFromCurrentSheet(row, col);
     if (comment) {
       const marker = document.createElement('div');
@@ -510,7 +526,7 @@ const SpreadsheetEditor = () => {
       td.appendChild(marker);
     }
     
-    // データ検証があるかどうかを示すマーカー
+    // データ検証マーカーの表示
     const validation = getDataValidationFromCurrentSheet(row, col);
     if (validation) {
       const marker = document.createElement('div');
@@ -525,13 +541,15 @@ const SpreadsheetEditor = () => {
       td.appendChild(marker);
     }
     
-    // 保護されたセルかどうかを示すマーカー
+    // 保護されたセルの表示
     if (isCellProtectedInCurrentSheet(row, col)) {
       td.classList.add('protected-cell');
     }
     
     return td;
   };
+
+  // ===== 機能ハンドラー =====
 
   // 書式メニュー処理
   const handleFormatCellClick = () => {
@@ -563,7 +581,7 @@ const SpreadsheetEditor = () => {
     
     setShowConditionalFormatModal(false);
     
-    // Handsontableに条件付き書式を適用
+    // 条件付き書式を適用
     const hot = hotRef.current.hotInstance;
     applyConditionalFormatting(hot);
   };
@@ -662,7 +680,7 @@ const SpreadsheetEditor = () => {
     
     // チャートを追加
     addChart({
-      title: chartSettings.title || 'New Chart',
+      title: chartSettings.title || '新しいチャート',
       type: chartSettings.type,
       dataRange: selectionRange,
       sheetId: currentSheet,
@@ -752,8 +770,8 @@ const SpreadsheetEditor = () => {
     const { searchText, replaceText, caseSensitive, wholeCell } = searchState;
     
     const hot = hotRef.current.hotInstance;
-    const selectedCell = hot.getSelected();
-    if (!selectedCell) {
+    const selectedCells = hot.getSelected();
+    if (!selectedCells) {
       updateStatusMessage('置換するセルが選択されていません', 3000);
       return;
     }
@@ -761,7 +779,7 @@ const SpreadsheetEditor = () => {
     // 変更前の状態をアンドゥスタックに保存
     pushToUndoStack(hot);
     
-    const [row, col] = selectedCell[0];
+    const [row, col] = selectedCells[0];
     const cellValue = hot.getDataAtCell(row, col);
     
     if (cellValue !== null && cellValue !== undefined) {
@@ -783,7 +801,7 @@ const SpreadsheetEditor = () => {
           newValue = cellText.replace(searchText, replaceText);
         } else {
           // 正規表現のエスケープ処理
-          const escapedSearchText = searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\');
+          const escapedSearchText = searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
           const regex = new RegExp(escapedSearchText, 'gi');
           newValue = cellText.replace(regex, replaceText);
         }
@@ -841,7 +859,7 @@ const SpreadsheetEditor = () => {
           } else {
             // 部分一致の場合は該当部分のみ置換
             // 正規表現のエスケープ処理
-            const escapedSearchText = searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\            // セル全体が一致する場合');
+            const escapedSearchText = searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const regex = new RegExp(escapedSearchText, caseSensitive ? 'g' : 'gi');
             
             const matches = cellText.match(regex);
@@ -903,6 +921,7 @@ const SpreadsheetEditor = () => {
       updateStatusMessage('セルを結合しました', 3000);
     } else {
       console.error('MergeCellsプラグインが利用できません');
+      updateStatusMessage('セル結合機能を利用できません', 3000);
     }
   };
 
@@ -924,12 +943,11 @@ const SpreadsheetEditor = () => {
     const mergeCellsPlugin = hot.getPlugin('mergeCells');
     if (mergeCellsPlugin) {
       // 選択範囲内のすべてのマージされたセルを解除
-      mergeCellsPlugin.unmerge(
-        Math.min(startRow, endRow),
-        Math.min(startCol, endCol),
-        Math.max(startRow, endRow),
-        Math.max(startCol, endCol)
-      );
+      for (let row = Math.min(startRow, endRow); row <= Math.max(startRow, endRow); row++) {
+        for (let col = Math.min(startCol, endCol); col <= Math.max(startCol, endCol); col++) {
+          mergeCellsPlugin.unmerge(row, col);
+        }
+      }
       
       hot.render(); // 変更を反映するための再描画
       
@@ -942,6 +960,7 @@ const SpreadsheetEditor = () => {
       updateStatusMessage('セルの結合を解除しました', 3000);
     } else {
       console.error('MergeCellsプラグインが利用できません');
+      updateStatusMessage('セル結合解除機能を利用できません', 3000);
     }
   };
 
@@ -991,19 +1010,22 @@ const SpreadsheetEditor = () => {
   };
 
   // Handsontableの設定
-  const hotSettings = {
-    data: currentSheetData,
-    rowHeaders: true,
-    colHeaders: true,
-    licenseKey: 'non-commercial-and-evaluation',
-    contextMenu: true,
-    manualColumnResize: true,
-    manualRowResize: true,
-    comments: true,
+const hotSettings = {
+  data: currentSheetData,
+  rowHeaders: true,
+  colHeaders: true,
+  licenseKey: 'non-commercial-and-evaluation',
+  contextMenu: true,
+  manualColumnResize: true,
+  manualRowResize: true,
+  comments: true,
+  // ここを条件付きで適用するように変更
+  ...(state.hyperformulaInstance ? {
     formulas: {
       engine: state.hyperformulaInstance,
       sheetName: currentSheet
-    },
+    }
+  } : {}),
     stretchH: 'all',
     autoWrapRow: true,
     wordWrap: true,
@@ -1013,16 +1035,19 @@ const SpreadsheetEditor = () => {
     fixedColumnsLeft: 0,
     minSpareRows: 5,
     minSpareCols: 2,
+    // イベントハンドラー
     afterSelectionEnd: handleAfterSelectionEnd,
     afterChange: handleAfterChange,
     afterOnCellMouseOver: handleCellMouseOver,
     afterOnCellMouseOut: handleCellMouseOut,
     afterOnCellDoubleClick: handleCellDoubleClick,
-    className: 'htCustomStyles',
+    // セルレンダラー
     cells: cellRenderer,
+    className: 'htCustomStyles',
     outsideClickDeselects: false
   };
 
+  // ===== レンダリング =====
   return (
     <div className="spreadsheet-container">
       <Helmet>
@@ -1041,6 +1066,7 @@ const SpreadsheetEditor = () => {
         </div>
       </div>
       
+      {/* メニューバー */}
       <MenuBar 
         onNewFile={handleNewFile}
         onOpenFile={() => setShowOpenFileModal(true)}
@@ -1075,6 +1101,7 @@ const SpreadsheetEditor = () => {
         onAlignRight={() => applyStyleToSelection(hotRef.current?.hotInstance, { textAlign: 'right' })}
       />
       
+      {/* ツールバー */}
       <Toolbar 
         onNew={handleNewFile}
         onOpen={() => setShowOpenFileModal(true)}
@@ -1101,6 +1128,7 @@ const SpreadsheetEditor = () => {
         onExportExcel={() => exportExcel(hotRef.current?.hotInstance)}
       />
       
+      {/* 数式バー */}
       <FormulaBar 
         cellAddress={cellAddress}
         value={formulaValue}
@@ -1110,6 +1138,7 @@ const SpreadsheetEditor = () => {
         onBlur={() => setIsFormulaEditing(false)}
       />
       
+      {/* シートタブ */}
       <SheetTabs 
         sheets={sheets}
         currentSheet={currentSheet}
@@ -1119,7 +1148,9 @@ const SpreadsheetEditor = () => {
         onDeleteSheet={deleteSheet}
       />
       
+      {/* スプレッドシート領域 */}
       <div className="spreadsheet-wrapper">
+        {/* Handsontableコンポーネント */}
         <HotTable
           ref={hotRef}
           {...hotSettings}
@@ -1149,6 +1180,7 @@ const SpreadsheetEditor = () => {
         )}
       </div>
       
+      {/* ステータスバー */}
       <StatusBar 
         message={statusMessage}
         stats={selectionStats}
